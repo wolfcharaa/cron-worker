@@ -10,6 +10,7 @@ use Wolfcharaa\Cron\Configuration\ExecTaskConfig;
 use Wolfcharaa\Cron\Configuration\Loader\CrontabConfigLoader;
 use Wolfcharaa\Cron\Runtime\SchedulerOptions;
 use Wolfcharaa\Cron\Scheduler;
+use Wolfcharaa\Cron\Task\OverlapPolicy;
 
 #[Test]
 final class CrontabConfigLoaderTest
@@ -35,6 +36,7 @@ final class CrontabConfigLoaderTest
         Assert::same($first->timezone->getName(), 'Europe/Moscow');
         Assert::instanceOf($first->task, ExecTaskConfig::class);
         Assert::same($first->task->workingDirectory, '/var/www/app');
+        Assert::same($first->task->overlapPolicy, OverlapPolicy::Allow);
         Assert::same($second->expression->toString(), '0 0 * * *');
     }
 

@@ -8,6 +8,7 @@ use Wolfcharaa\Cron\Configuration\ExecTaskConfig;
 use Wolfcharaa\Cron\Configuration\Profile;
 use Wolfcharaa\Cron\Registry\CronProfileMap;
 use Wolfcharaa\Cron\Registry\CronTaskDefinition;
+use Wolfcharaa\Cron\Task\OverlapPolicy;
 
 final readonly class CrontabConfigLoader implements CronConfigLoaderInterface
 {
@@ -81,6 +82,7 @@ final readonly class CrontabConfigLoader implements CronConfigLoaderInterface
                     workingDirectory: $environment['HOME'] ?? null,
                     environment: $environment,
                     shell: $shell,
+                    overlapPolicy: OverlapPolicy::Allow,
                     expectedUser: $user,
                 ),
                 expression: $expression,
