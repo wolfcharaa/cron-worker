@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use Psr\Container\ContainerInterface;
 use Wolfcharaa\Cron\Attribute\CronTask;
+use Wolfcharaa\Cron\Configuration\ChainConfig;
+use Wolfcharaa\Cron\Configuration\ServiceTaskConfig;
 use Wolfcharaa\Cron\Discovery\AttributeCronTaskDiscovery;
 use Wolfcharaa\Cron\Discovery\ClassListProvider;
 use Wolfcharaa\Cron\Runtime\SchedulerOptions;
@@ -16,6 +18,10 @@ require dirname(__DIR__) . '/vendor/autoload.php';
     profile: 'default',
     name: 'import',
     method: 'run',
+    chain: new ChainConfig(
+        new ServiceTaskConfig(ReindexCommand::class, method: 'run', taskName: 'reindex'),
+        new ServiceTaskConfig(NotifyCommand::class, taskName: 'notify'),
+    ),
 )]
 #[CronTask(
     schedule: '*/5 * * * *',
@@ -26,6 +32,22 @@ require dirname(__DIR__) . '/vendor/autoload.php';
 final class ImportCommand
 {
     public function run(): int
+    {
+        return 0;
+    }
+}
+
+final class ReindexCommand
+{
+    public function run(): int
+    {
+        return 0;
+    }
+}
+
+final class NotifyCommand
+{
+    public function __invoke(): int
     {
         return 0;
     }

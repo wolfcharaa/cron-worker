@@ -8,6 +8,7 @@ use Testo\Assert;
 use Testo\Expect;
 use Testo\Test;
 use Wolfcharaa\Cron\Configuration\Profile;
+use Wolfcharaa\Cron\Configuration\ServiceTaskConfig;
 use Wolfcharaa\Cron\Exception\DuplicateProfileTask;
 use Wolfcharaa\Cron\Registry\CronProfileMap;
 use Wolfcharaa\Cron\Registry\CronTaskDefinition;
@@ -71,8 +72,7 @@ final class CronProfileMapTest
         string $expression = '* * * * *',
     ): CronTaskDefinition {
         return new CronTaskDefinition(
-            name: $name,
-            serviceId: $name,
+            task: new ServiceTaskConfig($name),
             expression: $expression,
             profile: $profile,
         );

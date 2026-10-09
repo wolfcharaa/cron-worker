@@ -104,12 +104,25 @@ $scheduler
 
 ```php
 use Wolfcharaa\Cron\Attribute\CronTask;
+use Wolfcharaa\Cron\Configuration\ChainConfig;
+use Wolfcharaa\Cron\Configuration\ServiceTaskConfig;
 
 #[CronTask(
     schedule: '*/10 * * * *',
     profile: 'default',
     name: 'fis-upload',
     method: 'run',
+    chain: new ChainConfig(
+        new ServiceTaskConfig(
+            serviceId: ReindexPackages::class,
+            method: 'run',
+            taskName: 'fis-reindex',
+        ),
+        new ServiceTaskConfig(
+            serviceId: NotifyOperator::class,
+            taskName: 'fis-notify',
+        ),
+    ),
 )]
 #[CronTask(
     schedule: '*/10 * * * *',
@@ -136,6 +149,10 @@ final class UploadPreparedPackages
 команды добавляется ещё один атрибут: расписание, timezone и overlap policy
 остаются полностью независимыми между планами. Общую задачу можно явно отнести
 к профилю `any`.
+
+`ChainConfig` задаёт одноразовый success-pipeline именно для этого атрибута.
+Каждый следующий сервис запускается отдельным worker-процессом только после
+exit code `0` предыдущего; его cron-расписание для этого не требуется.
 
 Discovery использует поставщики классов по тому же принципу, что и MessageBus:
 

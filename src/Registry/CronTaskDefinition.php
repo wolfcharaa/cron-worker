@@ -4,45 +4,34 @@ declare(strict_types=1);
 
 namespace Wolfcharaa\Cron\Registry;
 
+use Wolfcharaa\Cron\Configuration\ChainConfig;
 use Wolfcharaa\Cron\Configuration\Profile;
+use Wolfcharaa\Cron\Configuration\TaskConfigInterface;
 use Wolfcharaa\Cron\Schedule\CronExpression;
-use Wolfcharaa\Cron\Task\OverlapPolicy;
 
 final readonly class CronTaskDefinition
 {
+    public string $name;
+
     public CronExpression $expression;
 
     public \DateTimeZone $timezone;
 
     public Profile $profile;
 
-    /**
-     * @param array<int|string, mixed> $arguments
-     */
     public function __construct(
-        public string $name,
-        public string $serviceId,
+        public TaskConfigInterface $task,
         CronExpression|string $expression,
         Profile|string|\BackedEnum $profile = Profile::DEFAULT,
-        public ?string $method = null,
-        public array $arguments = [],
         \DateTimeZone|string $timezone = 'UTC',
-        public OverlapPolicy $overlapPolicy = OverlapPolicy::Forbid,
+        ?ChainConfig $chain = null,
     ) {
-        if ($this->name === '') {
-            throw new \InvalidArgumentException('Cron task definition name must not be empty.');
-        }
-
-        if ($this->serviceId === '') {
-            throw new \InvalidArgumentException('Cron task service id must not be empty.');
-        }
-
-        if ($this->method === '') {
-            throw new \InvalidArgumentException('Cron task service method must not be empty.');
-        }
-
+        $this->name = $this->task->name();
         $this->expression = \is_string($expression) ? new CronExpression($expression) : $expression;
         $this->profile = Profile::normalize($profile);
         $this->timezone = \is_string($timezone) ? new \DateTimeZone($timezone) : $timezone;
+        $this->chain = $chain ?? new ChainConfig();
     }
+
+    public ChainConfig $chain;
 }

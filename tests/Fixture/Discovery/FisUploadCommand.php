@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Wolfcharaa\Cron\Tests\Fixture\Discovery;
 
 use Wolfcharaa\Cron\Attribute\CronTask;
+use Wolfcharaa\Cron\Configuration\ChainConfig;
+use Wolfcharaa\Cron\Configuration\ServiceTaskConfig;
 use Wolfcharaa\Cron\Task\OverlapPolicy;
 
 #[CronTask(
@@ -15,6 +17,17 @@ use Wolfcharaa\Cron\Task\OverlapPolicy;
     arguments: ['prepared'],
     timezone: 'Europe/Moscow',
     overlapPolicy: OverlapPolicy::Allow,
+    chain: new ChainConfig(
+        new ServiceTaskConfig(
+            serviceId: ReindexCommand::class,
+            method: 'run',
+            taskName: 'fis-reindex',
+        ),
+        new ServiceTaskConfig(
+            serviceId: NotifyCommand::class,
+            taskName: 'fis-notify',
+        ),
+    ),
 )]
 #[CronTask(
     schedule: '*/10 * * * *',

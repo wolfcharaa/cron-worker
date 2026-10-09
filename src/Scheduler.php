@@ -24,6 +24,7 @@ use Wolfcharaa\Cron\Schedule\CronSchedule;
 use Wolfcharaa\Cron\Task\Handler\ContainerCallbackHandler;
 use Wolfcharaa\Cron\Task\Handler\ContainerServiceHandler;
 use Wolfcharaa\Cron\Task\Handler\TaskHandler;
+use Wolfcharaa\Cron\Task\OneShotTaskBuilder;
 use Wolfcharaa\Cron\Task\OverlapPolicy;
 use Wolfcharaa\Cron\Task\ScheduledTask;
 use Wolfcharaa\Cron\Task\ScheduledTaskBuilder;
@@ -132,13 +133,26 @@ final class Scheduler implements SchedulerInterface
     {
         foreach ($profiles->forProfile($this->profile) as $task) {
             $builder = $this
-                ->serviceTask($task->name, $task->serviceId, $task->method, $task->arguments)
+                ->task($task->name, $task->task->createHandler($this->containerFactory))
                 ->cron($task->expression)
                 ->timezone($task->timezone)
                 ->profile($task->profile);
 
-            if ($task->overlapPolicy === OverlapPolicy::Allow) {
+            if ($task->task->overlapPolicy() === OverlapPolicy::Allow) {
                 $builder->allowOverlapping();
+            }
+
+            $chainBuilder = null;
+
+            foreach ($task->chain->tasks() as $chainTask) {
+                $handler = $chainTask->createHandler($this->containerFactory);
+                $chainBuilder = $chainBuilder instanceof OneShotTaskBuilder
+                    ? $chainBuilder->then($chainTask->name(), $handler)
+                    : $builder->then($chainTask->name(), $handler);
+
+                if ($chainTask->overlapPolicy() === OverlapPolicy::Allow) {
+                    $chainBuilder->allowOverlapping();
+                }
             }
         }
 

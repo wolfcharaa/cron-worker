@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Wolfcharaa\Cron\Registry;
 
 use Wolfcharaa\Cron\Configuration\Profile;
+
 final class CronProfileMap
 {
     /** @var array<string, CronProfileConfig> */

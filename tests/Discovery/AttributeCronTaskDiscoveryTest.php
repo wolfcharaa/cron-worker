@@ -16,7 +16,9 @@ use Wolfcharaa\Cron\Schedule\CronSchedule;
 use Wolfcharaa\Cron\Scheduler;
 use Wolfcharaa\Cron\Task\OverlapPolicy;
 use Wolfcharaa\Cron\Tests\Fixture\Discovery\FisUploadCommand;
+use Wolfcharaa\Cron\Tests\Fixture\Discovery\NotifyCommand;
 use Wolfcharaa\Cron\Tests\Fixture\Discovery\RecoverStaleCommand;
+use Wolfcharaa\Cron\Tests\Fixture\Discovery\ReindexCommand;
 use Wolfcharaa\Cron\Tests\Stub\ArrayContainer;
 
 #[Test]
@@ -40,6 +42,8 @@ final class AttributeCronTaskDiscoveryTest
             options: new SchedulerOptions(profile: 'server-10.11.166.100'),
             containerFactory: static fn(): ContainerInterface => new ArrayContainer([
                 FisUploadCommand::class => new FisUploadCommand(),
+                ReindexCommand::class => new ReindexCommand(),
+                NotifyCommand::class => new NotifyCommand(),
                 RecoverStaleCommand::class => new RecoverStaleCommand(),
             ]),
         );
@@ -57,6 +61,25 @@ final class AttributeCronTaskDiscoveryTest
         Assert::same($upload->schedule->timezone()->getName(), 'Europe/Moscow');
         Assert::same($upload->overlapPolicy, OverlapPolicy::Allow);
         Assert::same($upload->execute(), 0);
+    }
+
+    public function buildsAttributePipelineForItsOwnProfile(): void
+    {
+        $scheduler = new Scheduler(
+            options: new SchedulerOptions(profile: 'default'),
+            containerFactory: static fn(): ContainerInterface => new ArrayContainer([
+                FisUploadCommand::class => new FisUploadCommand(),
+                ReindexCommand::class => new ReindexCommand(),
+                NotifyCommand::class => new NotifyCommand(),
+                RecoverStaleCommand::class => new RecoverStaleCommand(),
+            ]),
+        );
+        $scheduler->load($this->discover());
+        $upload = $scheduler->tasks()['fis-upload'] ?? throw new \LogicException('Upload task is missing.');
+
+        Assert::same($upload->next?->name, 'fis-reindex');
+        Assert::same($upload->next->next?->name, 'fis-notify');
+        Assert::same($upload->next->next->next, null);
     }
 
     private function discover(): CronProfileMap
