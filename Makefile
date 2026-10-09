@@ -3,6 +3,13 @@ SHELL := /bin/sh
 DOCKER ?= docker
 DOCKER_COMPOSE ?= $(DOCKER) compose
 export DOCKER_USER ?= $(shell id -u):$(shell id -g)
+export COMPOSER_CACHE_DIR ?= $(HOME)/.cache/composer
+export PHP_VERSION ?= 8.2
+
+PHP_VERSIONS ?= 8.2 8.3 8.4 8.5
+DEPENDENCY_MODE ?= highest
+MATRIX_VENDOR_DIR = var/php-matrix/php-$(PHP_VERSION)-$(DEPENDENCY_MODE)/vendor
+MATRIX_DEPENDENCY_FLAGS = $(if $(filter lowest,$(DEPENDENCY_MODE)),--prefer-lowest --prefer-stable,)
 
 RUN ?= $(if $(IN_CONTAINER),,$(DOCKER_COMPOSE) run --rm php)
 COMPOSER ?= $(RUN) composer
@@ -73,6 +80,29 @@ phpstan: var vendor ## Run static analysis
 test: var vendor up ## Run the test suite
 	$(RUN) vendor/bin/testo $(ARGS)
 .PHONY: test
+
+test-php-version: var ## Test one PHP/dependency combination in an isolated container
+	@case '$(DEPENDENCY_MODE)' in lowest|highest) ;; *) echo 'DEPENDENCY_MODE must be lowest or highest' >&2; exit 2 ;; esac
+	mkdir -p $(COMPOSER_CACHE_DIR) $(MATRIX_VENDOR_DIR)
+	$(DOCKER_COMPOSE) run --rm \
+		--env COMPOSER_VENDOR_DIR=$(MATRIX_VENDOR_DIR) \
+		php composer update --no-interaction --prefer-dist --no-progress $(MATRIX_DEPENDENCY_FLAGS)
+	$(DOCKER_COMPOSE) run --rm \
+		--env COMPOSER_VENDOR_DIR=$(MATRIX_VENDOR_DIR) \
+		php php $(MATRIX_VENDOR_DIR)/bin/testo --no-coverage $(ARGS)
+.PHONY: test-php-version
+
+test-php-matrix: ## Test PHP 8.2-8.5 with lowest and highest dependencies
+	@set -eu; \
+	for version in $(PHP_VERSIONS); do \
+		for dependencies in lowest highest; do \
+			$(MAKE) --no-print-directory \
+				PHP_VERSION=$$version \
+				DEPENDENCY_MODE=$$dependencies \
+				test-php-version; \
+		done; \
+	done
+.PHONY: test-php-matrix
 
 infect: var vendor up ## Run mutation testing
 	$(RUN) infection --show-mutations $(ARGS)

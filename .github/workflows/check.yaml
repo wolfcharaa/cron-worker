@@ -41,11 +41,12 @@ jobs:
       - run: PHP_VERSION=${{ matrix.php }} make ${{ matrix.deps == 'lowest' && 'install-lowest' || '' }} phpstan
 
   test:
+    name: Test PHP ${{ matrix.php }} / ${{ matrix.deps }} dependencies
     runs-on: ubuntu-latest
     strategy: *strategy
     steps:
       - uses: actions/checkout@v6
-      - run: PHP_VERSION=${{ matrix.php }} make ${{ matrix.deps == 'lowest' && 'install-lowest' || '' }} test
+      - run: PHP_VERSION=${{ matrix.php }} DEPENDENCY_MODE=${{ matrix.deps }} make test-php-version
 
   # infect:
   #   runs-on: ubuntu-latest
