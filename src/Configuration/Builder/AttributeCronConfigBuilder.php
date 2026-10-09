@@ -13,9 +13,7 @@ final readonly class AttributeCronConfigBuilder implements CronConfigBuilderInte
 {
     public static function forProject(?string $projectRoot = null, bool $includeDev = false): self
     {
-        if ($projectRoot === null) {
-            $projectRoot = getcwd();
-        }
+        $projectRoot ??= getcwd();
 
         if ($projectRoot === false || $projectRoot === '') {
             throw new \RuntimeException('Unable to determine the Composer project root.');
