@@ -1,33 +1,17 @@
-# Project Guidance
+# Cron Library Guidance
 
-Use the global `development` skill for ordinary code changes, checks, and
-commits. Repository-local skills are stored under `.agents/skills` and refine
-that workflow when their technology or task matches.
-
-## Skill Routing
-
-- `cake-development` — CakePHP backend, MessageBus, table-registry, modular
-  architecture, and project Git conventions.
-- `spiral-hexagonal` — Spiral services and pragmatic hexagonal boundaries.
-- `frontend-fsd-design` — React/Inertia ownership, FSD boundaries, and UI
-  composition.
-- `react-code-quality` — React components, hooks, state, effects, and version
-  changes.
-- `frontend-quality-loop` — requested UI polish and hardening after material
-  interaction changes.
-- `docker-deployment` — Compose, Makefile, release, deployment, and rollback.
-- `project-template-maintenance` — changes to this reusable template itself.
-
-Remove skills that do not match the project after choosing its stack. Keep
-project-specific commands and invariants in this file or a focused local skill.
+Use the global `development` skill for code changes, tests, commits and
+debugging. Use `library-documentation` when changing the public documentation.
 
 ## Invariants
 
-- Keep the root PHP package scaffold runnable; opt-in framework assets live
-  under `templates/`.
-- Name reusable files by technology or purpose, not by a source repository.
-- Never add real `.env` files, credentials, private keys, runtime data, Docker
-  archives, Git bundles, database dumps, or internal registry/server values.
-- Keep Make targets as stable public entrypoints over readable scripts and
-  Compose files.
-- Run `make templates-check` after changing templates or local skills.
+- Keep the package compatible with PHP 8.2-8.5 on Unix-like systems with
+  `pcntl` and `posix`.
+- Preserve the non-blocking master process: blocking work belongs in forked
+  child workers.
+- Create application containers and external connections inside child scope.
+- Keep configuration loaders independent and validate their combined profile
+  map before task registration.
+- Do not add credentials, private infrastructure values, runtime data or
+  generated release artifacts.
+- Run the relevant quality checks and the PHP version matrix before a release.

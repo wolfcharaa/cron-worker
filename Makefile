@@ -2,7 +2,6 @@ SHELL := /bin/sh
 
 DOCKER ?= docker
 DOCKER_COMPOSE ?= $(DOCKER) compose
-export DOCKER_USER ?= $(shell id -u):$(shell id -g)
 export COMPOSER_CACHE_DIR ?= $(HOME)/.cache/composer
 export PHP_VERSION ?= 8.2
 
@@ -124,36 +123,13 @@ composer-normalize-check: ## Check composer.json is normalized
 	$(COMPOSER) normalize --diff --dry-run
 .PHONY: composer-normalize-check
 
-# Project templates
-
-templates-list: ## List reusable Docker, Makefile, and skill templates
-	@find templates .agents/skills -type f \( -name 'README.md' -o -name 'Makefile.fragment' -o -name '*.Makefile' -o -name 'SKILL.md' \) -print | sort
-.PHONY: templates-list
-
-templates-check: ## Validate reusable scripts, skills, and installers
-	bin/check-templates
-.PHONY: templates-check
-
 # CI
 
 fix: fixer rector composer-normalize ## Fix code style and normalize composer.json
 .PHONY: fix
 
-check: templates-check fixer-check rector-check composer-validate composer-normalize-check deps-analyze phpstan test ## Run all checks
+check: fixer-check rector-check composer-validate composer-normalize-check deps-analyze phpstan test ## Run all checks
 .PHONY: check
-
-rescaffold:
-	$(DOCKER) run \
-	  --rm --init \
-	  --interactive --tty \
-	  --user $(DOCKER_USER) \
-	  --volume .:/project \
-	  --pull always \
-	  ghcr.io/phpyh/scaffolder:latest \
-	  --user-name-default '$(shell git config user.name 2>/dev/null || whoami 2>/dev/null)' \
-	  --user-email-default '$(shell git config user.email 2>/dev/null)'
-	git add --all 2>/dev/null || true
-.PHONY: rescaffold
 
 # ---
 
