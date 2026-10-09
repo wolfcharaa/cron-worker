@@ -7,13 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.0-rc] - 2026-10-10
+## [0.1.0-rc.1] - 2026-10-10
 
 ### Added
 
 - Packaged `cron-worker-integration` Codex skill for guided discovery,
   configuration-source selection and safe application migration without
   reading library internals.
+
+## [0.1.0-rc] - 2026-10-09
+
+### Added
+
 - Static and container-callback chain task configs with preflight callable and
   profile-map validation before scheduler registration.
 - Runtime platform contract tests for PCNTL and POSIX support.
