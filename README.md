@@ -173,6 +173,29 @@ $scheduler
 профиля до запуска воркера. Класс команды считается service id и извлекается
 из свежего PSR-11 контейнера в child-процессе.
 
+### Классический crontab и exec
+
+Готовый user crontab можно подключить как отдельную конфигурацию профиля:
+
+```php
+use Wolfcharaa\Cron\Configuration\Builder\CrontabConfigBuilder;
+
+$scheduler->load(CrontabConfigBuilder::fromFile(
+    path: dirname(__DIR__) . '/config/cron/prod.crontab',
+    profile: 'prod',
+));
+```
+
+Для стабильного имени задачи перед строкой используется комментарий
+`# cron:name=cleanup`; без него builder создаёт детерминированное имя из
+расписания и команды. Формат `/etc/crontab` с колонкой пользователя включается
+через `systemFormat: true`. Сам scheduler не меняет Unix-пользователя: сервис
+должен быть заранее запущен под нужным аккаунтом.
+
+Команда выполняется через настроенный `SHELL` внутри отдельного fork-worker.
+Поэтому ожидание внешнего процесса не блокирует master event loop, а его exit
+code участвует в обычной success-chain семантике.
+
 ## Низкоуровневый cron API
 
 `CronExpression` можно создать из готовой строки или собрать по отдельным
