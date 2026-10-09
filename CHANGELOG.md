@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Named scheduler profiles with arbitrary catalog-compatible names and an
   `any` wildcard for shared tasks.
+- Cron profile maps with duplicate task validation per deployment plan.
 - PSR-11 container-aware handlers with child-process container factories and
   one-shot success chains.
 - Fluent task and schedule builders with typed minute, hour, day and month
