@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Runtime platform contract tests for PHP 8.2+ with PCNTL and POSIX support.
 - Extensible cron configuration loaders for explicit attribute discovery and
   classic crontab files without library-specific directives.
 - Native PHP YAML configuration loading with mvdcake catalog compatibility,
