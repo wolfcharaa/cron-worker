@@ -42,4 +42,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Library documentation is split into task-oriented guides, contracts and
+  copyable examples, with README kept as the navigation and quick-start page.
 - PSR Container compatibility now includes both `^1.1` and `^2.0`.
