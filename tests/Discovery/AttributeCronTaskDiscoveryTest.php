@@ -26,11 +26,11 @@ final class AttributeCronTaskDiscoveryTest
     {
         $map = $this->discover();
 
-        Assert::same($this->names($map->forProfile('default')), ['fis-upload', 'recover-stale']);
-        Assert::same($this->names($map->forProfile('server-10.11.166.100')), ['fis-upload', 'recover-stale']);
+        Assert::same($this->names($map->forProfile('default')), ['recover-stale', 'fis-upload']);
+        Assert::same($this->names($map->forProfile('server-10.11.166.100')), ['recover-stale', 'fis-upload']);
         Assert::same($this->expressions($map->forProfile('server-10.11.159.86')), [
-            '0 * * * *',
             '* * * * *',
+            '0 * * * *',
         ]);
     }
 
@@ -46,7 +46,7 @@ final class AttributeCronTaskDiscoveryTest
         $scheduler->load($this->discover());
         $tasks = $scheduler->tasks();
 
-        Assert::same(array_keys($tasks), ['fis-upload', 'recover-stale']);
+        Assert::same(array_keys($tasks), ['recover-stale', 'fis-upload']);
         $upload = $tasks['fis-upload'] ?? throw new \LogicException('Discovered upload task is missing.');
 
         if (!$upload->schedule instanceof CronSchedule) {

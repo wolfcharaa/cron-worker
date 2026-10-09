@@ -14,18 +14,16 @@ final readonly class CronTaskDefinition
 
     public \DateTimeZone $timezone;
 
-    /** @var list<Profile> */
-    public array $profiles;
+    public Profile $profile;
 
     /**
-     * @param list<Profile|string|\BackedEnum> $profiles
      * @param array<int|string, mixed> $arguments
      */
     public function __construct(
         public string $name,
         public string $serviceId,
         CronExpression|string $expression,
-        array $profiles = [Profile::ANY],
+        Profile|string|\BackedEnum $profile = Profile::DEFAULT,
         public ?string $method = null,
         public array $arguments = [],
         \DateTimeZone|string $timezone = 'UTC',
@@ -44,7 +42,7 @@ final readonly class CronTaskDefinition
         }
 
         $this->expression = \is_string($expression) ? new CronExpression($expression) : $expression;
-        $this->profiles = Profile::normalizeList($profiles);
+        $this->profile = Profile::normalize($profile);
         $this->timezone = \is_string($timezone) ? new \DateTimeZone($timezone) : $timezone;
     }
 }

@@ -18,9 +18,11 @@ final class CronProfileMapTest
     public function buildsDeploymentPlansFromSharedAndNamedTasks(): void
     {
         $map = new CronProfileMap([
-            $this->task('recover-stale', [Profile::ANY]),
-            $this->task('prepare-packages', ['default', 'server-10.11.159.86']),
-            $this->task('upload-packages', ['default', 'server-10.11.166.100']),
+            $this->task('recover-stale', Profile::ANY),
+            $this->task('prepare-packages', 'default'),
+            $this->task('prepare-packages', 'server-10.11.159.86'),
+            $this->task('upload-packages', 'default'),
+            $this->task('upload-packages', 'server-10.11.166.100'),
         ]);
 
         Assert::same(
@@ -35,8 +37,8 @@ final class CronProfileMapTest
     public function allowsSameTaskNameInDisjointProfiles(): void
     {
         $map = new CronProfileMap([
-            $this->task('upload-packages', ['stage'], '*/10 * * * *'),
-            $this->task('upload-packages', ['prod'], '0 * * * *'),
+            $this->task('upload-packages', 'stage', '*/10 * * * *'),
+            $this->task('upload-packages', 'prod', '0 * * * *'),
         ]);
 
         Assert::same($this->expressions($map->forProfile('stage')), ['*/10 * * * *']);
@@ -46,36 +48,33 @@ final class CronProfileMapTest
     public function rejectsDuplicateTaskInsideOneProfile(): void
     {
         $map = new CronProfileMap([
-            $this->task('duplicate', ['prod']),
+            $this->task('duplicate', 'prod'),
         ]);
 
         Expect::exception(DuplicateProfileTask::class);
-        $map->add($this->task('duplicate', ['prod']));
+        $map->add($this->task('duplicate', 'prod'));
     }
 
     public function rejectsNamedOverrideOfAnyTask(): void
     {
         $map = new CronProfileMap([
-            $this->task('duplicate', [Profile::ANY]),
+            $this->task('duplicate', Profile::ANY),
         ]);
 
-        Expect::exception(DuplicateProfileTask::class);
-        $map->add($this->task('duplicate', ['prod']));
+        Expect::exception(\LogicException::class);
+        $map->add($this->task('duplicate', 'prod'));
     }
 
-    /**
-     * @param list<string> $profiles
-     */
     private function task(
         string $name,
-        array $profiles,
+        string $profile,
         string $expression = '* * * * *',
     ): CronTaskDefinition {
         return new CronTaskDefinition(
             name: $name,
             serviceId: $name,
             expression: $expression,
-            profiles: $profiles,
+            profile: $profile,
         );
     }
 

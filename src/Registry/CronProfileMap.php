@@ -5,15 +5,10 @@ declare(strict_types=1);
 namespace Wolfcharaa\Cron\Registry;
 
 use Wolfcharaa\Cron\Configuration\Profile;
-use Wolfcharaa\Cron\Exception\DuplicateProfileTask;
-
 final class CronProfileMap
 {
-    /** @var array<string, array<string, CronTaskDefinition>> */
-    private array $tasks = [];
-
-    /** @var list<CronTaskDefinition> */
-    private array $definitions = [];
+    /** @var array<string, CronProfileConfig> */
+    private array $profiles = [];
 
     /** @param iterable<CronTaskDefinition> $tasks */
     public function __construct(iterable $tasks = [])
@@ -25,15 +20,27 @@ final class CronProfileMap
 
     public function add(CronTaskDefinition $task): self
     {
-        foreach ($task->profiles as $profile) {
-            $this->guardUnique($task->name, $profile);
+        $this->guardSharedTaskCollision($task);
+        $profile = $this->profiles[$task->profile->name] ??= new CronProfileConfig($task->profile);
+        $profile->add($task);
+
+        return $this;
+    }
+
+    public function addProfile(CronProfileConfig $profile): self
+    {
+        foreach ($profile->tasks() as $task) {
+            $this->add($task);
         }
 
-        foreach ($task->profiles as $profile) {
-            $this->tasks[$profile->name][$task->name] = $task;
-        }
+        return $this;
+    }
 
-        $this->definitions[] = $task;
+    public function merge(self $map): self
+    {
+        foreach ($map->profileConfigs() as $profile) {
+            $this->addProfile($profile);
+        }
 
         return $this;
     }
@@ -42,46 +49,64 @@ final class CronProfileMap
     public function forProfile(Profile|string|\BackedEnum $profile): array
     {
         $profile = Profile::normalize($profile);
-        $tasks = [];
+        $sharedProfile = $this->profiles[Profile::ANY] ?? null;
+        $shared = $sharedProfile?->tasks() ?? [];
 
-        foreach ($this->definitions as $task) {
-            foreach ($task->profiles as $assignedProfile) {
-                if (!$assignedProfile->includes($profile)) {
-                    continue;
-                }
+        if ($profile->name === Profile::ANY) {
+            return array_values($shared);
+        }
 
-                $tasks[] = $task;
+        $specificProfile = $this->profiles[$profile->name] ?? null;
+        $specific = $specificProfile?->tasks() ?? [];
 
-                continue 2;
+        foreach ($shared as $name => $task) {
+            if (isset($specific[$name])) {
+                throw new \LogicException(\sprintf(
+                    'Task "%s" is defined in both "%s" and "%s" profiles.',
+                    $name,
+                    Profile::ANY,
+                    $profile->name,
+                ));
             }
         }
 
-        return $tasks;
+        return array_values([...$shared, ...$specific]);
     }
 
     /** @return list<string> */
     public function profiles(): array
     {
-        return array_keys($this->tasks);
+        return array_keys($this->profiles);
     }
 
-    private function guardUnique(string $taskName, Profile $profile): void
+    /** @return array<string, CronProfileConfig> */
+    public function profileConfigs(): array
     {
-        if (isset($this->tasks[$profile->name][$taskName])) {
-            throw new DuplicateProfileTask($taskName, $profile->name);
-        }
+        return $this->profiles;
+    }
 
-        if ($profile->name !== Profile::ANY && isset($this->tasks[Profile::ANY][$taskName])) {
-            throw new DuplicateProfileTask($taskName, $profile->name);
-        }
+    private function guardSharedTaskCollision(CronTaskDefinition $task): void
+    {
+        if ($task->profile->name !== Profile::ANY) {
+            $sharedProfile = $this->profiles[Profile::ANY] ?? null;
 
-        if ($profile->name !== Profile::ANY) {
+            if ($sharedProfile !== null && isset($sharedProfile->tasks()[$task->name])) {
+                throw new \LogicException(\sprintf(
+                    'Task "%s" is already defined in the shared profile.',
+                    $task->name,
+                ));
+            }
+
             return;
         }
 
-        foreach ($this->tasks as $name => $tasks) {
-            if (isset($tasks[$taskName])) {
-                throw new DuplicateProfileTask($taskName, $name);
+        foreach ($this->profiles as $name => $profile) {
+            if ($name !== Profile::ANY && isset($profile->tasks()[$task->name])) {
+                throw new \LogicException(\sprintf(
+                    'Shared task "%s" is already defined in profile "%s".',
+                    $task->name,
+                    $name,
+                ));
             }
         }
     }

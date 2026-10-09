@@ -13,7 +13,13 @@ require dirname(__DIR__) . '/vendor/autoload.php';
 
 #[CronTask(
     schedule: '*/10 * * * *',
-    profiles: ['default', 'stage'],
+    profile: 'default',
+    name: 'import',
+    method: 'run',
+)]
+#[CronTask(
+    schedule: '*/5 * * * *',
+    profile: 'stage',
     name: 'import',
     method: 'run',
 )]

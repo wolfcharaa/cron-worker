@@ -135,7 +135,7 @@ final class Scheduler implements SchedulerInterface
                 ->serviceTask($task->name, $task->serviceId, $task->method, $task->arguments)
                 ->cron($task->expression)
                 ->timezone($task->timezone)
-                ->profiles(...$task->profiles);
+                ->profile($task->profile);
 
             if ($task->overlapPolicy === OverlapPolicy::Allow) {
                 $builder->allowOverlapping();

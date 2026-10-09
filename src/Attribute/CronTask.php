@@ -14,18 +14,16 @@ final readonly class CronTask
 {
     public CronExpression $expression;
 
-    /** @var list<Profile> */
-    public array $profiles;
+    public Profile $profile;
 
     public \DateTimeZone $timezone;
 
     /**
-     * @param list<Profile|string|\BackedEnum> $profiles
      * @param array<int|string, mixed> $arguments
      */
     public function __construct(
         string $schedule,
-        array $profiles = [Profile::ANY],
+        Profile|string|\BackedEnum $profile = Profile::DEFAULT,
         public ?string $name = null,
         public ?string $method = null,
         public array $arguments = [],
@@ -41,7 +39,7 @@ final readonly class CronTask
         }
 
         $this->expression = new CronExpression($schedule);
-        $this->profiles = Profile::normalizeList($profiles);
+        $this->profile = Profile::normalize($profile);
         $this->timezone = new \DateTimeZone($timezone);
     }
 
@@ -52,7 +50,7 @@ final readonly class CronTask
             name: $this->name ?? $serviceId,
             serviceId: $serviceId,
             expression: $this->expression,
-            profiles: $this->profiles,
+            profile: $this->profile,
             method: $this->method,
             arguments: $this->arguments,
             timezone: $this->timezone,

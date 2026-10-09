@@ -107,13 +107,19 @@ use Wolfcharaa\Cron\Attribute\CronTask;
 
 #[CronTask(
     schedule: '*/10 * * * *',
-    profiles: ['default', 'server-10.11.166.100'],
+    profile: 'default',
+    name: 'fis-upload',
+    method: 'run',
+)]
+#[CronTask(
+    schedule: '*/10 * * * *',
+    profile: 'server-10.11.166.100',
     name: 'fis-upload',
     method: 'run',
 )]
 #[CronTask(
     schedule: '0 * * * *',
-    profiles: ['server-10.11.159.86'],
+    profile: 'server-10.11.159.86',
     name: 'fis-upload',
     method: 'run',
 )]
@@ -126,9 +132,10 @@ final class UploadPreparedPackages
 }
 ```
 
-Один атрибут принимает сразу несколько профилей. Повторный атрибут нужен,
-когда расписание, timezone или overlap policy этой же команды отличаются между
-планами.
+Каждый атрибут принадлежит ровно одному профилю. Для другой конфигурации той же
+команды добавляется ещё один атрибут: расписание, timezone и overlap policy
+остаются полностью независимыми между планами. Общую задачу можно явно отнести
+к профилю `any`.
 
 Discovery использует поставщики классов по тому же принципу, что и MessageBus:
 
