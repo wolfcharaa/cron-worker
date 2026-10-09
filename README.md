@@ -78,8 +78,13 @@ $scheduler->task('sync', $handler)->every($interval);
 Активный план выбирается один раз:
 
 ```php
+$configuredProfile = getenv('APP_CRON_PROFILE');
+$activeProfile = is_string($configuredProfile) && $configuredProfile !== ''
+    ? $configuredProfile
+    : 'default';
+
 $scheduler = new Scheduler(
-    new SchedulerOptions(profile: 'server-10.11.166.100'),
+    new SchedulerOptions(profile: $activeProfile),
 );
 
 $scheduler->task('shared', $handler); // any — входит во все планы

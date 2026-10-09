@@ -28,9 +28,13 @@ final class ImportCommand
 $profiles = (new AttributeCronTaskDiscovery())->discover(
     new ClassListProvider([ImportCommand::class]),
 );
+$configuredProfile = getenv('APP_CRON_PROFILE');
+$activeProfile = is_string($configuredProfile) && $configuredProfile !== ''
+    ? $configuredProfile
+    : 'default';
 
 $scheduler = new Scheduler(
-    options: new SchedulerOptions(profile: 'stage'),
+    options: new SchedulerOptions(profile: $activeProfile),
     containerFactory: static function (): ContainerInterface {
         throw new LogicException('Replace this callback with the application bootstrap.');
     },
