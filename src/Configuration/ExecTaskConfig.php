@@ -19,6 +19,8 @@ final readonly class ExecTaskConfig implements TaskConfigInterface
         public array $environment = [],
         public string $shell = '/bin/sh',
         public OverlapPolicy $overlapPolicy = OverlapPolicy::Forbid,
+        public ?string $expectedUser = null,
+        public ?string $outputFile = null,
     ) {
         if ($this->taskName === '') {
             throw new \InvalidArgumentException('Exec task name must not be empty.');
@@ -34,6 +36,14 @@ final readonly class ExecTaskConfig implements TaskConfigInterface
 
         if ($this->shell === '') {
             throw new \InvalidArgumentException('Exec shell must not be empty.');
+        }
+
+        if ($this->expectedUser === '') {
+            throw new \InvalidArgumentException('Exec expected user must not be empty.');
+        }
+
+        if ($this->outputFile === '') {
+            throw new \InvalidArgumentException('Exec output file must not be empty.');
         }
     }
 
@@ -54,6 +64,8 @@ final readonly class ExecTaskConfig implements TaskConfigInterface
             workingDirectory: $this->workingDirectory,
             environment: $this->environment,
             shell: $this->shell,
+            expectedUser: $this->expectedUser,
+            outputFile: $this->outputFile,
         );
     }
 }

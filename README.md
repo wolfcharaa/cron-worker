@@ -219,6 +219,58 @@ $scheduler->load(CrontabConfigLoader::fromFile(
 Поэтому ожидание внешнего процесса не блокирует master event loop, а его exit
 code участвует в обычной success-chain семантике.
 
+### YAML-конфигурация
+
+`.yaml` и `.yml` файлы читаются напрямую в PHP через `symfony/yaml`. Внешний
+renderer или Lua не нужны:
+
+```php
+use Wolfcharaa\Cron\Configuration\Loader\YamlConfigLoader;
+
+$scheduler->load(YamlConfigLoader::fromFile(
+    dirname(__DIR__) . '/config/crontab.yaml',
+));
+```
+
+Каждый профиль хранит свои расписания и runtime-настройки. Поле `then`
+задаёт одноразовую цепочку, как и `ChainConfig`:
+
+```yaml
+$schema: ../vendor/romanfedorskij/cron/resources/schema/crontab.schema.json
+version: 1
+profiles:
+  stage:
+    timezone: Europe/Moscow
+    shell: /bin/bash
+    working_directory: /var/www/html
+    environment:
+      APP_ENV: stage
+    jobs:
+      - name: import
+        schedule: "*/15 * * * *"
+        command: php bin/console app:import
+        overlap_policy: forbid
+        then:
+          - name: notify
+            command: php bin/console app:notify
+  prod:
+    timezone: UTC
+    jobs:
+      - name: import
+        schedule: "0 * * * *"
+        command: php bin/console app:import --prod
+```
+
+Схема лежит в `resources/schema/crontab.schema.json`. Loader также строго
+проверяет типы, обязательные поля и неизвестные ключи до запуска event
+loop.
+
+Для прямой замены mvdcake Lua-renderer поддерживается его формат с корневым
+`defaults` и полями `cwd`, `path`, `user`, `log`. Любую из этих настроек можно
+переопределить в профиле или отдельной задаче. `user` не переключает Unix-аккаунт:
+child-worker проверяет, что scheduler уже запущен под нужным пользователем. `log`
+перенаправляет stdout и stderr команды в указанный файл в append-режиме.
+
 Несколько loader-ов можно объединить через `CompositeCronConfigLoader`.
 
 ## Низкоуровневый cron API

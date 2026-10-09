@@ -25,4 +25,38 @@ final class ExecTaskHandlerTest
             7,
         );
     }
+
+    public function validatesUserAndAppendsCommandOutput(): void
+    {
+        $account = posix_getpwuid(posix_geteuid());
+
+        if ($account === false) {
+            throw new \RuntimeException('Unable to resolve the current Unix user.');
+        }
+
+        $user = $account['name'];
+        $output = tempnam(sys_get_temp_dir(), 'cron-exec-');
+
+        if ($output === false) {
+            throw new \RuntimeException('Unable to create command output file.');
+        }
+
+        $config = new ExecTaskConfig(
+            taskName: 'write-output',
+            command: 'printf cron-output',
+            expectedUser: $user,
+            outputFile: $output,
+        );
+        $now = new \DateTimeImmutable();
+
+        try {
+            Assert::same(
+                $config->createHandler(null)->execute(new TaskExecutionContext('write-output', $now, $now)),
+                0,
+            );
+            Assert::same(file_get_contents($output), 'cron-output');
+        } finally {
+            unlink($output);
+        }
+    }
 }

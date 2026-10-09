@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Extensible cron configuration loaders for explicit attribute discovery and
   classic crontab files.
+- Native PHP YAML configuration loading with mvdcake catalog compatibility,
+  separate profile settings, one-shot exec chains and a published JSON Schema.
 - Profile-specific attribute pipelines through `ChainConfig`, service task
   configs and external exec task configs.
 - Separate `CronProfileConfig` maps so every profile owns its complete task
