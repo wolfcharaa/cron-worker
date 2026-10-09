@@ -1,74 +1,65 @@
-# PHP Project Template
+# Cron worker
 
-Переиспользуемый PHP project scaffold с Composer, Docker/Makefile-заготовками
-и локальными Codex-навыками в обычной структуре проекта.
+Подключаемая PHP-библиотека для запуска задач по cron-правилам. Master-процесс
+использует Revolt для неблокирующего ожидания таймеров и сигналов, а каждая
+задача исполняется в отдельном процессе через `pcntl_fork()`.
 
-## Что включено
+Библиотека предназначена для Unix-like систем и требует PHP 8.2+, `pcntl` и
+`posix`.
 
-- рабочий PHP library scaffold с Composer, PHPStan, Rector, Testo и CI;
-- `templates/docker/spiral` — Docker/Compose/Lua/PHP-runtime шаблон для
-  Spiral/RoadRunner;
-- `templates/make/cakephp-application.Makefile` — общий lifecycle/release
-  Makefile для CakePHP и других multi-service PHP-приложений;
-- `.agents/skills` — активные навыки для CakePHP, Spiral, React/Inertia,
-  Docker deployment и сопровождения шаблона.
-
-После создания проекта удалите навыки и framework-шаблоны, которые не
-соответствуют выбранному стеку. Основные правила проекта оставляйте в
-`AGENTS.md`, а подробные повторяемые workflow — в `.agents/skills`.
-
-## Быстрый старт
+## Установка
 
 ```shell
-make help
-make templates-list
-make templates-check
+composer require romanfedorskij/cron
 ```
 
-## Docker-шаблоны
+## Использование
 
-Для Spiral-проекта перенесите содержимое `templates/docker/spiral` в
-проектный `docker/`, затем адаптируйте service names, Compose files, registry,
-env contract и health checks. Не накладывайте каталог поверх существующего
-Docker-контура без предварительного diff.
+```php
+<?php
 
-Для CakePHP/multi-service проекта начните с
-`templates/make/cakephp-application.Makefile` и возьмите только нужные wrappers
-из `templates/docker/spiral/compose`.
+declare(strict_types=1);
 
-Подробные границы и проверки описаны в
-`.agents/skills/docker-deployment/SKILL.md` и `templates/make/README.md`.
+use Wolfcharaa\Cron\Runtime\SchedulerOptions;
+use Wolfcharaa\Cron\Scheduler;
 
-## Исходный package scaffold
+require __DIR__ . '/vendor/autoload.php';
 
-```shell
-composer require romanfedorskij/template
+$scheduler = new Scheduler(
+    new SchedulerOptions(maxConcurrency: 4),
+);
+
+$scheduler->cron(
+    name: 'cleanup',
+    expression: '*/5 * * * *',
+    handler: static function (): int {
+        // Блокирующая работа безопасна для master event loop: этот код
+        // выполняется в дочернем процессе.
+        return 0;
+    },
+    timezone: 'Europe/Moscow',
+);
+
+$scheduler->run();
 ```
 
-## Локальная отладка
+Callable должен вернуть `null` или exit code от `0` до `255`. По умолчанию
+повторный запуск задачи не начинается, пока работает её предыдущий процесс.
+Глобальная параллельность ограничивается через `SchedulerOptions`.
 
-В development-окружении вместо прямой зависимости от Symfony VarDumper
-используется Buggregator Trap. После установки зависимостей локальный сервер
-запускается без Docker:
+> После fork дочерний процесс наследует память master-процесса. Не используйте
+> одновременно в parent и child заранее открытые PDO, Redis и другие сетевые
+> соединения. Создавайте process-local ресурсы внутри callable. Вариант
+> `fork + exec` будет добавлен отдельным supervisor-адаптером.
 
-```shell
-vendor/bin/trap --ui=8000
-```
+## Сигналы
 
-Веб-интерфейс будет доступен на `http://127.0.0.1:8000`; без `--ui`
-Trap выводит события прямо в терминал.
+- `SIGCHLD` неблокирующе освобождает завершившиеся процессы через `WNOHANG`.
+- `SIGTERM` и `SIGINT` останавливают планирование и начинают graceful shutdown.
+- Повторный сигнал завершения или истечение grace period приводит к `SIGKILL`.
 
-Для отправки значений используйте `trap($value)`, а для возврата значения
-после дампа — `tr($value)`. Сам Trap продолжает использовать и расширять
-Symfony VarDumper внутри, поэтому привычная функция `dump()` также остаётся
-доступной.
-
-## Проверка
+## Разработка
 
 ```shell
-make templates-check
 make check
 ```
-
-`templates-check` проверяет shell/Lua syntax, структуру всех локальных
-`SKILL.md` и smoke-сценарии Lua helpers.

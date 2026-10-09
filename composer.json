@@ -1,6 +1,6 @@
 {
-    "name": "romanfedorskij/template",
-    "description": "Romanfedorskij Template",
+    "name": "romanfedorskij/cron",
+    "description": "Non-blocking cron scheduler with forked PHP workers",
     "license": "MIT",
     "type": "library",
     "authors": [
@@ -10,7 +10,13 @@
         }
     ],
     "require": {
-        "php": "^8.2"
+        "php": "^8.2",
+        "ext-pcntl": "*",
+        "ext-posix": "*",
+        "dragonmantank/cron-expression": "^3.6",
+        "psr/clock": "^1.0",
+        "psr/log": "^3.0",
+        "revolt/event-loop": "^1.0"
     },
     "require-dev": {
         "buggregator/trap": "^1.16.1",
@@ -23,12 +29,12 @@
     },
     "autoload": {
         "psr-4": {
-            "Wolfcharaa\\Template\\": "src/"
+            "Wolfcharaa\\Cron\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Wolfcharaa\\Template\\": "tests/"
+            "Wolfcharaa\\Cron\\Tests\\": "tests/"
         }
     },
     "config": {
