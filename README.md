@@ -45,6 +45,23 @@ $scheduler
 $scheduler->run();
 ```
 
+### Ограничения параллельности
+
+`OverlapPolicy` действует на одну задачу по имени. Значение `Forbid`, которое
+используется по умолчанию, не запускает новый экземпляр `cleanup`, пока другой
+`cleanup` ещё работает. `Allow` разрешает такие пересечения и включается через
+`allowOverlapping()` или соответствующее поле конфигурации.
+
+`SchedulerOptions::maxConcurrency` — общий предел одновременно работающих
+fork-worker процессов для всего scheduler. Когда предел занят, очередная
+scheduled-задача пропускает текущий cron tick, а одноразовая задача из
+`ChainConfig` остаётся во внутренней очереди до освобождения worker slot.
+
+Эти параметры не делают выполнение асинхронным и не блокируют event loop. Это
+защита от повторной неидемпотентной работы и исчерпания CPU, памяти, соединений
+или файловых дескрипторов. Неблокирующее ожидание обеспечивают таймеры Revolt,
+`SIGCHLD` и `waitpid(..., WNOHANG)` в master-процессе.
+
 Для обычных сценариев знать синтаксис cron не требуется:
 
 ```php
@@ -222,6 +239,11 @@ Builder вызывает renderer с `--format summary` и `--format commands`, 
 Атрибуты, crontab и Lua можно объединять:
 
 ```php
+use Wolfcharaa\Cron\Configuration\Builder\AttributeCronConfigBuilder;
+use Wolfcharaa\Cron\Configuration\Builder\CompositeCronConfigBuilder;
+use Wolfcharaa\Cron\Configuration\Builder\CrontabConfigBuilder;
+use Wolfcharaa\Cron\Configuration\Builder\LuaProfileConfigBuilder;
+
 $scheduler->load(new CompositeCronConfigBuilder(
     AttributeCronConfigBuilder::forProject(dirname(__DIR__)),
     CrontabConfigBuilder::fromFile($crontab, profile: $activeProfile),
