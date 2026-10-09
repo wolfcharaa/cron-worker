@@ -5,8 +5,8 @@ declare(strict_types=1);
 use Psr\Container\ContainerInterface;
 use Wolfcharaa\Cron\Attribute\CronTask;
 use Wolfcharaa\Cron\Configuration\ChainConfig;
+use Wolfcharaa\Cron\Configuration\Loader\AttributeCronConfigLoader;
 use Wolfcharaa\Cron\Configuration\ServiceTaskConfig;
-use Wolfcharaa\Cron\Discovery\AttributeCronTaskDiscovery;
 use Wolfcharaa\Cron\Discovery\ClassListProvider;
 use Wolfcharaa\Cron\Runtime\SchedulerOptions;
 use Wolfcharaa\Cron\Scheduler;
@@ -53,9 +53,6 @@ final class NotifyCommand
     }
 }
 
-$profiles = (new AttributeCronTaskDiscovery())->discover(
-    new ClassListProvider([ImportCommand::class]),
-);
 $configuredProfile = getenv('APP_CRON_PROFILE');
 $activeProfile = is_string($configuredProfile) && $configuredProfile !== ''
     ? $configuredProfile
@@ -68,4 +65,8 @@ $scheduler = new Scheduler(
     },
 );
 
-$scheduler->load($profiles)->run();
+$scheduler
+    ->load(new AttributeCronConfigLoader(
+        new ClassListProvider([ImportCommand::class]),
+    ))
+    ->run();

@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Runtime platform contract tests for PCNTL and POSIX support.
 - Isolated PHP 8.2-8.5 test matrix for lowest and highest dependency sets.
+- Copyable application worker bootstrap for composing attribute, YAML,
+  classic crontab and manual task sources.
 - Extensible cron configuration loaders for explicit attribute discovery and
   classic crontab files without library-specific directives.
 - Native PHP YAML configuration loading with mvdcake catalog compatibility,
