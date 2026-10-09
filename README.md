@@ -196,6 +196,39 @@ $scheduler->load(CrontabConfigBuilder::fromFile(
 Поэтому ожидание внешнего процесса не блокирует master event loop, а его exit
 code участвует в обычной success-chain семантике.
 
+### YAML-профили через Lua renderer
+
+Каталог формата `mvdcake/docker/php/cron/profiles.yaml` подключается через уже
+существующий Lua renderer. Один builder всегда собирает один выбранный профиль:
+
+```php
+use Wolfcharaa\Cron\Configuration\Builder\LuaProfileConfigBuilder;
+
+$scheduler->load(new LuaProfileConfigBuilder(
+    rendererCommand: [
+        'lua5.3',
+        dirname(__DIR__) . '/docker/php/render-cron-profile.lua',
+    ],
+    catalog: dirname(__DIR__) . '/docker/php/cron/profiles.yaml',
+    profile: $activeProfile,
+));
+```
+
+Builder вызывает renderer с `--format summary` и `--format commands`, проверяет
+число задач и собирает exec-конфигурацию. YAML остаётся ответственностью Lua
+скрипта, поэтому библиотеке не требуется ещё один YAML parser и сохраняется
+тот же смысл профилей, который уже проверяется в `mvdcake`.
+
+Атрибуты, crontab и Lua можно объединять:
+
+```php
+$scheduler->load(new CompositeCronConfigBuilder(
+    AttributeCronConfigBuilder::forProject(dirname(__DIR__)),
+    CrontabConfigBuilder::fromFile($crontab, profile: $activeProfile),
+    new LuaProfileConfigBuilder($renderer, $catalog, profile: $activeProfile),
+));
+```
+
 ## Низкоуровневый cron API
 
 `CronExpression` можно создать из готовой строки или собрать по отдельным
