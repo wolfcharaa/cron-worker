@@ -16,6 +16,7 @@ use Wolfcharaa\Cron\Exception\DuplicateTask;
 use Wolfcharaa\Cron\Exception\MissingContainerFactory;
 use Wolfcharaa\Cron\Process\PcntlProcessSupervisor;
 use Wolfcharaa\Cron\Process\ProcessSupervisor;
+use Wolfcharaa\Cron\Registry\CronProfileMap;
 use Wolfcharaa\Cron\Runtime\RevoltSchedulerRuntime;
 use Wolfcharaa\Cron\Runtime\SchedulerOptions;
 use Wolfcharaa\Cron\Schedule\CronExpression;
@@ -123,6 +124,23 @@ final class Scheduler implements SchedulerInterface
         }
 
         $this->tasks[$task->name] = $task;
+
+        return $this;
+    }
+
+    public function load(CronProfileMap $profiles): self
+    {
+        foreach ($profiles->forProfile($this->profile) as $task) {
+            $builder = $this
+                ->serviceTask($task->name, $task->serviceId, $task->method, $task->arguments)
+                ->cron($task->expression)
+                ->timezone($task->timezone)
+                ->profiles(...$task->profiles);
+
+            if ($task->overlapPolicy === OverlapPolicy::Allow) {
+                $builder->allowOverlapping();
+            }
+        }
 
         return $this;
     }

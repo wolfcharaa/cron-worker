@@ -93,6 +93,58 @@ $scheduler
 корневой scheduled-задаче: после её запуска вся цепочка `then*()` исполняется
 без повторной фильтрации и ожидания нового schedule.
 
+### Атрибуты команд
+
+Карта профилей может собираться из repeatable-атрибутов над сервисами команд:
+
+```php
+use Wolfcharaa\Cron\Attribute\CronTask;
+
+#[CronTask(
+    schedule: '*/10 * * * *',
+    profiles: ['default', 'server-10.11.166.100'],
+    name: 'fis-upload',
+    method: 'run',
+)]
+#[CronTask(
+    schedule: '0 * * * *',
+    profiles: ['server-10.11.159.86'],
+    name: 'fis-upload',
+    method: 'run',
+)]
+final class UploadPreparedPackages
+{
+    public function run(): int
+    {
+        return 0;
+    }
+}
+```
+
+Один атрибут принимает сразу несколько профилей. Повторный атрибут нужен,
+когда расписание, timezone или overlap policy этой же команды отличаются между
+планами.
+
+Discovery использует поставщики классов по тому же принципу, что и MessageBus:
+
+```php
+use Wolfcharaa\Cron\Discovery\AttributeCronTaskDiscovery;
+use Wolfcharaa\Cron\Discovery\Psr4DirectoryClassProvider;
+
+$profiles = (new AttributeCronTaskDiscovery())->discover(
+    new Psr4DirectoryClassProvider([
+        'App\\Command\\' => dirname(__DIR__) . '/src/Command',
+    ]),
+);
+
+$scheduler->load($profiles)->run();
+```
+
+Также доступны `ClassListProvider`, `ComposerClassMapProvider`,
+`ChainClassProvider` и `RegexFilterClassProvider`. Карта проверяет конфликты
+имён внутри каждого профиля до запуска воркера. Класс команды считается
+service id и извлекается из свежего PSR-11 контейнера в child-процессе.
+
 ## Низкоуровневый cron API
 
 `CronExpression` можно создать из готовой строки или собрать по отдельным

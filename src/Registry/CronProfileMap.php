@@ -12,6 +12,9 @@ final class CronProfileMap
     /** @var array<string, array<string, CronTaskDefinition>> */
     private array $tasks = [];
 
+    /** @var list<CronTaskDefinition> */
+    private array $definitions = [];
+
     /** @param iterable<CronTaskDefinition> $tasks */
     public function __construct(iterable $tasks = [])
     {
@@ -30,6 +33,8 @@ final class CronProfileMap
             $this->tasks[$profile->name][$task->name] = $task;
         }
 
+        $this->definitions[] = $task;
+
         return $this;
     }
 
@@ -37,17 +42,21 @@ final class CronProfileMap
     public function forProfile(Profile|string|\BackedEnum $profile): array
     {
         $profile = Profile::normalize($profile);
-        $tasks = $this->tasks[Profile::ANY] ?? [];
+        $tasks = [];
 
-        foreach ($this->tasks[$profile->name] ?? [] as $name => $task) {
-            if (isset($tasks[$name])) {
-                throw new DuplicateProfileTask($name, $profile->name);
+        foreach ($this->definitions as $task) {
+            foreach ($task->profiles as $assignedProfile) {
+                if (!$assignedProfile->includes($profile)) {
+                    continue;
+                }
+
+                $tasks[] = $task;
+
+                continue 2;
             }
-
-            $tasks[$name] = $task;
         }
 
-        return array_values($tasks);
+        return $tasks;
     }
 
     /** @return list<string> */
