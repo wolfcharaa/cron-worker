@@ -4,30 +4,39 @@ declare(strict_types=1);
 
 namespace Wolfcharaa\Cron\Task;
 
+use Psr\Container\ContainerInterface;
+use Wolfcharaa\Cron\Container\ContainerFactory;
+use Wolfcharaa\Cron\Exception\MissingContainerFactory;
 use Wolfcharaa\Cron\Schedule\CronExpression;
 use Wolfcharaa\Cron\Schedule\Frequency\EveryTime;
 use Wolfcharaa\Cron\Schedule\ScheduleBuilder;
+use Wolfcharaa\Cron\Task\Handler\ContainerCallbackHandler;
+use Wolfcharaa\Cron\Task\Handler\ContainerServiceHandler;
+use Wolfcharaa\Cron\Task\Handler\TaskHandler;
 
 final class ScheduledTaskBuilder
 {
-    /** @var \Closure(): mixed */
-    private readonly \Closure $handler;
+    /** @var (\Closure(): mixed)|TaskHandler */
+    private readonly \Closure|TaskHandler $handler;
 
     private readonly ScheduleBuilder $schedule;
 
     private OverlapPolicy $overlapPolicy = OverlapPolicy::Forbid;
 
-    /** @param callable(): mixed $handler */
+    private ?OneShotTaskBuilder $next = null;
+
+    /** @param (callable(): mixed)|TaskHandler $handler */
     public function __construct(
         public readonly string $name,
-        callable $handler,
+        callable|TaskHandler $handler,
         ?ScheduleBuilder $schedule = null,
+        private readonly ?ContainerFactory $containerFactory = null,
     ) {
         if ($this->name === '') {
             throw new \InvalidArgumentException('Task name must not be empty.');
         }
 
-        $this->handler = \Closure::fromCallable($handler);
+        $this->handler = $handler instanceof TaskHandler ? $handler : \Closure::fromCallable($handler);
         $this->schedule = $schedule ?? ScheduleBuilder::create();
     }
 
@@ -164,6 +173,35 @@ final class ScheduledTaskBuilder
         return $this;
     }
 
+    /** @param (callable(): mixed)|TaskHandler $handler */
+    public function then(string $name, callable|TaskHandler $handler): OneShotTaskBuilder
+    {
+        $this->next = new OneShotTaskBuilder($name, $handler, $this->containerFactory);
+
+        return $this->next;
+    }
+
+    /** @param callable(ContainerInterface, TaskExecutionContext): mixed $handler */
+    public function thenContainer(string $name, callable $handler): OneShotTaskBuilder
+    {
+        return $this->then($name, new ContainerCallbackHandler($this->requireContainerFactory(), $handler));
+    }
+
+    /** @param array<int|string, mixed> $arguments */
+    public function thenService(
+        string $name,
+        string $serviceId,
+        ?string $method = null,
+        array $arguments = [],
+    ): OneShotTaskBuilder {
+        return $this->then($name, new ContainerServiceHandler(
+            containerFactory: $this->requireContainerFactory(),
+            serviceId: $serviceId,
+            method: $method,
+            arguments: $arguments,
+        ));
+    }
+
     public function build(): ScheduledTask
     {
         return new ScheduledTask(
@@ -171,6 +209,12 @@ final class ScheduledTaskBuilder
             schedule: $this->schedule->build(),
             handler: $this->handler,
             overlapPolicy: $this->overlapPolicy,
+            next: $this->next?->build(),
         );
+    }
+
+    private function requireContainerFactory(): ContainerFactory
+    {
+        return $this->containerFactory ?? throw new MissingContainerFactory();
     }
 }

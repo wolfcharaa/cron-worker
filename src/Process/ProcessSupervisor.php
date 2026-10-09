@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Wolfcharaa\Cron\Process;
 
-use Wolfcharaa\Cron\Task\ScheduledTask;
+use Wolfcharaa\Cron\Task\Task;
 
 interface ProcessSupervisor
 {
-    public function launch(ScheduledTask $task, \DateTimeImmutable $plannedAt, \DateTimeImmutable $startedAt): ChildProcess;
+    public function launch(Task $task, \DateTimeImmutable $plannedAt, \DateTimeImmutable $startedAt): ChildProcess;
 
     /** @return list<CompletedProcess> */
     public function reapExited(): array;

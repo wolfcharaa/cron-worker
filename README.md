@@ -92,13 +92,75 @@ echo $configured->toString(); // 15 2 * * MON-FRI
 $scheduler->cron('legacy-task', '*/5 * * * *', $handler, 'Europe/Moscow');
 ```
 
+## Задачи из контейнера
+
+Для интеграции с PSR-11 передаётся фабрика, а не уже созданный контейнер. Она
+вызывается после `fork` внутри процесса задачи, поэтому каждый запуск может
+получить собственный scope и новые подключения:
+
+```php
+use Psr\Container\ContainerInterface;
+use Wolfcharaa\Cron\Scheduler;
+
+$scheduler = new Scheduler(
+    containerFactory: static function (): ContainerInterface {
+        // Bootstrap приложения или создание нового container scope.
+        return createApplicationContainer();
+    },
+);
+
+$scheduler
+    ->serviceTask('import', ImportCommand::class, 'run')
+    ->everyMinutes(15)
+    ->thenService('reindex', ReindexCommand::class, 'run')
+    ->thenService('notify', NotifyCommand::class);
+```
+
+Если сервис реализует `__invoke()`, имя метода можно не указывать. Аргументы
+метода передаются четвёртым параметром `serviceTask()` или `thenService()`.
+
+Для произвольной логики доступен container-aware callback:
+
+```php
+use Wolfcharaa\Cron\Task\TaskExecutionContext;
+
+$scheduler
+    ->containerTask(
+        'cleanup',
+        static function (
+            ContainerInterface $container,
+            TaskExecutionContext $context,
+        ): int {
+            $container->get(CleanupService::class)->run();
+
+            return 0;
+        },
+    )
+    ->dailyAt(3);
+```
+
+Каждый элемент после `then()`, `thenContainer()` или `thenService()` является
+одноразовым. Master ставит его во внутреннюю очередь только после успешного
+завершения предыдущего процесса с exit code `0`. При исключении, сигнале или
+ненулевом exit code цепочка останавливается.
+
+`SchedulerInterface` предназначен для регистрации scheduler в DI-контейнере,
+но не передаётся в child. Изменения объекта scheduler после `fork` остались бы
+только в памяти дочернего процесса и не дошли бы до master.
+
+Фабрика не должна возвращать контейнер master-процесса или захватывать из него
+готовые сетевые клиенты. Она должна действительно создавать child-local scope.
+Полную изоляцию уже открытых файловых дескрипторов обеспечит будущий адаптер
+`fork + exec`; один `pcntl_fork()` не может отменить наследование памяти и FD.
+
 Callable должен вернуть `null` или exit code от `0` до `255`. По умолчанию
 повторный запуск задачи не начинается, пока работает её предыдущий процесс.
 Глобальная параллельность ограничивается через `SchedulerOptions`.
 
 > После fork дочерний процесс наследует память master-процесса. Не используйте
 > одновременно в parent и child заранее открытые PDO, Redis и другие сетевые
-> соединения. Создавайте process-local ресурсы внутри callable. Вариант
+> соединения. Создавайте process-local ресурсы через `containerFactory` или
+> непосредственно внутри callable. Вариант
 > `fork + exec` будет добавлен отдельным supervisor-адаптером.
 
 ## Сигналы

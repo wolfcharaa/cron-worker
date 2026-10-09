@@ -28,4 +28,18 @@ final class ScheduledTaskBuilderTest
         Assert::same($task->overlapPolicy, OverlapPolicy::Allow);
         Assert::same($task->execute(), 7);
     }
+
+    public function buildsOneShotSuccessChain(): void
+    {
+        $builder = new ScheduledTaskBuilder('first', static fn(): int => 0);
+        $builder
+            ->then('second', static fn(): int => 0)
+            ->then('third', static fn(): int => 0);
+
+        $task = $builder->build();
+
+        Assert::same($task->next?->name, 'second');
+        Assert::same($task->next->next?->name, 'third');
+        Assert::same($task->next->next->next, null);
+    }
 }

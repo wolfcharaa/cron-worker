@@ -9,8 +9,10 @@ use Psr\Log\LoggerInterface;
 use Revolt\EventLoop;
 use Wolfcharaa\Cron\Process\CompletedProcess;
 use Wolfcharaa\Cron\Process\ProcessSupervisor;
+use Wolfcharaa\Cron\Task\OneShotTask;
 use Wolfcharaa\Cron\Task\OverlapPolicy;
 use Wolfcharaa\Cron\Task\ScheduledTask;
+use Wolfcharaa\Cron\Task\Task;
 
 final class RevoltSchedulerRuntime
 {
@@ -19,6 +21,9 @@ final class RevoltSchedulerRuntime
 
     /** @var array<string, \DateTimeImmutable> */
     private array $nextRuns = [];
+
+    /** @var list<array{task: OneShotTask, queuedAt: \DateTimeImmutable}> */
+    private array $pendingTasks = [];
 
     private ?string $scheduleTimerId = null;
 
@@ -130,21 +135,10 @@ final class RevoltSchedulerRuntime
                 continue;
             }
 
-            try {
-                $process = $this->supervisor->launch($task, $plannedAt, $now);
-                $this->logger->info('Scheduled task started.', [
-                    'task' => $name,
-                    'pid' => $process->pid,
-                    'planned_at' => $plannedAt->format(DATE_ATOM),
-                ]);
-            } catch (\Throwable $throwable) {
-                $this->logger->error('Unable to start scheduled task.', [
-                    'task' => $name,
-                    'exception' => $throwable,
-                ]);
-            }
+            $this->launchTask($task, $plannedAt, $now, 'schedule');
         }
 
+        $this->dispatchPendingTasks();
         $this->armNextTimer();
     }
 
@@ -174,7 +168,23 @@ final class RevoltSchedulerRuntime
     {
         foreach ($this->supervisor->reapExited() as $completed) {
             $this->logCompletion($completed);
+
+            $next = $completed->process->task->next;
+
+            if ($completed->succeeded() && !$this->stopping && $next !== null) {
+                $this->pendingTasks[] = [
+                    'task' => $next,
+                    'queuedAt' => $this->clock->now(),
+                ];
+
+                $this->logger->info('Follow-up task queued.', [
+                    'task' => $next->name,
+                    'after' => $completed->process->taskName,
+                ]);
+            }
         }
+
+        $this->dispatchPendingTasks();
 
         if ($this->stopping && $this->supervisor->runningCount() === 0) {
             $this->finishShutdown();
@@ -191,12 +201,71 @@ final class RevoltSchedulerRuntime
         ];
 
         if ($completed->succeeded()) {
-            $this->logger->info('Scheduled task completed.', $context);
+            $this->logger->info('Task completed.', $context);
 
             return;
         }
 
-        $this->logger->error('Scheduled task failed.', $context);
+        $this->logger->error('Task failed.', $context);
+    }
+
+    private function launchTask(
+        Task $task,
+        \DateTimeImmutable $plannedAt,
+        \DateTimeImmutable $startedAt,
+        string $trigger,
+    ): bool {
+        try {
+            $process = $this->supervisor->launch($task, $plannedAt, $startedAt);
+            $this->logger->info('Task started.', [
+                'task' => $task->name,
+                'pid' => $process->pid,
+                'planned_at' => $plannedAt->format(DATE_ATOM),
+                'trigger' => $trigger,
+            ]);
+
+            return true;
+        } catch (\Throwable $throwable) {
+            $this->logger->error('Unable to start task.', [
+                'task' => $task->name,
+                'trigger' => $trigger,
+                'exception' => $throwable,
+            ]);
+
+            return false;
+        }
+    }
+
+    private function dispatchPendingTasks(): void
+    {
+        if ($this->stopping || $this->pendingTasks === []) {
+            return;
+        }
+
+        $remaining = [];
+
+        foreach ($this->pendingTasks as $pending) {
+            $task = $pending['task'];
+
+            if ($this->supervisor->runningCount() >= $this->options->maxConcurrency) {
+                $remaining[] = $pending;
+
+                continue;
+            }
+
+            if (
+                $task->overlapPolicy === OverlapPolicy::Forbid
+                && $this->supervisor->isTaskRunning($task->name)
+            ) {
+                $remaining[] = $pending;
+
+                continue;
+            }
+
+            $this->launchTask($task, $pending['queuedAt'], $this->clock->now(), 'follow-up');
+        }
+
+        $this->pendingTasks = $remaining;
     }
 
     private function requestShutdown(int $signal): void
@@ -208,6 +277,7 @@ final class RevoltSchedulerRuntime
         }
 
         $this->stopping = true;
+        $this->pendingTasks = [];
         $this->logger->info('Scheduler shutdown requested.', ['signal' => $signal]);
 
         if ($this->scheduleTimerId !== null) {

@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace Wolfcharaa\Cron\Process;
 
 use Wolfcharaa\Cron\Exception\ProcessControlFailure;
-use Wolfcharaa\Cron\Task\ScheduledTask;
+use Wolfcharaa\Cron\Task\Task;
+use Wolfcharaa\Cron\Task\TaskExecutionContext;
 
 final class PcntlProcessSupervisor implements ProcessSupervisor
 {
@@ -13,7 +14,7 @@ final class PcntlProcessSupervisor implements ProcessSupervisor
     private array $children = [];
 
     public function launch(
-        ScheduledTask $task,
+        Task $task,
         \DateTimeImmutable $plannedAt,
         \DateTimeImmutable $startedAt,
     ): ChildProcess {
@@ -33,12 +34,12 @@ final class PcntlProcessSupervisor implements ProcessSupervisor
             }
 
             if ($pid === 0) {
-                $this->runChild($task, $validatedMask);
+                $this->runChild($task, $plannedAt, $startedAt, $validatedMask);
             }
 
             $process = new ChildProcess(
                 pid: $pid,
-                taskName: $task->name,
+                task: $task,
                 plannedAt: $plannedAt,
                 startedAt: $startedAt,
             );
@@ -118,8 +119,12 @@ final class PcntlProcessSupervisor implements ProcessSupervisor
     }
 
     /** @param list<int> $previousMask */
-    private function runChild(ScheduledTask $task, array $previousMask): never
-    {
+    private function runChild(
+        Task $task,
+        \DateTimeImmutable $plannedAt,
+        \DateTimeImmutable $startedAt,
+        array $previousMask,
+    ): never {
         pcntl_sigprocmask(SIG_SETMASK, $previousMask);
 
         foreach ([SIGCHLD, SIGINT, SIGTERM, SIGHUP] as $signal) {
@@ -129,7 +134,11 @@ final class PcntlProcessSupervisor implements ProcessSupervisor
         posix_setpgid(0, 0);
 
         try {
-            exit($task->execute());
+            exit($task->execute(new TaskExecutionContext(
+                taskName: $task->name,
+                plannedAt: $plannedAt,
+                startedAt: $startedAt,
+            )));
         } catch (\Throwable $throwable) {
             fwrite(
                 STDERR,

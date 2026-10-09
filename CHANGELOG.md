@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- PSR-11 container-aware handlers with child-process container factories and
+  one-shot success chains.
 - Fluent task and schedule builders with typed minute, hour, day and month
   interval configurations.
 - Configurable `CronExpression` value object with parsing and serialization of
@@ -16,3 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Revolt-based cron scheduler runtime.
 - PCNTL process supervisor with non-blocking child reaping.
 - Cron schedules, overlap protection, concurrency limits and graceful shutdown.
+
+### Changed
+
+- PSR Container compatibility now includes both `^1.1` and `^2.0`.
