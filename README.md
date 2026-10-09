@@ -154,25 +154,24 @@ final class UploadPreparedPackages
 Каждый следующий сервис запускается отдельным worker-процессом только после
 exit code `0` предыдущего; его cron-расписание для этого не требуется.
 
-Discovery использует поставщики классов по тому же принципу, что и MessageBus:
+В обычном Composer-приложении не нужно перечислять классы или директории
+вручную: builder читает PSR-4 roots из `composer.json`, обходит проект и строит
+профильную hash map до запуска event loop:
 
 ```php
-use Wolfcharaa\Cron\Discovery\AttributeCronTaskDiscovery;
-use Wolfcharaa\Cron\Discovery\Psr4DirectoryClassProvider;
+use Wolfcharaa\Cron\Configuration\Builder\AttributeCronConfigBuilder;
 
-$profiles = (new AttributeCronTaskDiscovery())->discover(
-    new Psr4DirectoryClassProvider([
-        'App\\Command\\' => dirname(__DIR__) . '/src/Command',
-    ]),
-);
-
-$scheduler->load($profiles)->run();
+$scheduler
+    ->load(AttributeCronConfigBuilder::forProject(dirname(__DIR__)))
+    ->run();
 ```
 
-Также доступны `ClassListProvider`, `ComposerClassMapProvider`,
-`ChainClassProvider` и `RegexFilterClassProvider`. Карта проверяет конфликты
-имён внутри каждого профиля до запуска воркера. Класс команды считается
-service id и извлекается из свежего PSR-11 контейнера в child-процессе.
+Для нестандартной раскладки можно передать builder-у `ClassListProvider`,
+`Psr4DirectoryClassProvider`, `ComposerClassMapProvider`, `ChainClassProvider`
+или `RegexFilterClassProvider`. Несколько источников объединяются через
+`CompositeCronConfigBuilder`. Карта проверяет конфликты имён внутри каждого
+профиля до запуска воркера. Класс команды считается service id и извлекается
+из свежего PSR-11 контейнера в child-процессе.
 
 ## Низкоуровневый cron API
 

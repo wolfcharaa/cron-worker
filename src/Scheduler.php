@@ -9,6 +9,7 @@ use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Wolfcharaa\Cron\Clock\SystemClock;
+use Wolfcharaa\Cron\Configuration\Builder\CronConfigBuilderInterface;
 use Wolfcharaa\Cron\Configuration\Profile;
 use Wolfcharaa\Cron\Container\CallableContainerFactory;
 use Wolfcharaa\Cron\Container\ContainerFactory;
@@ -129,8 +130,12 @@ final class Scheduler implements SchedulerInterface
         return $this;
     }
 
-    public function load(CronProfileMap $profiles): self
+    public function load(CronProfileMap|CronConfigBuilderInterface $profiles): self
     {
+        if ($profiles instanceof CronConfigBuilderInterface) {
+            $profiles = $profiles->build();
+        }
+
         foreach ($profiles->forProfile($this->profile) as $task) {
             $builder = $this
                 ->task($task->name, $task->task->createHandler($this->containerFactory))

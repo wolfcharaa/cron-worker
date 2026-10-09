@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Wolfcharaa\Cron;
 
 use Psr\Container\ContainerInterface;
+use Wolfcharaa\Cron\Configuration\Builder\CronConfigBuilderInterface;
 use Wolfcharaa\Cron\Registry\CronProfileMap;
 use Wolfcharaa\Cron\Schedule\CronExpression;
 use Wolfcharaa\Cron\Task\Handler\TaskHandler;
@@ -40,7 +41,7 @@ interface SchedulerInterface
 
     public function add(ScheduledTask $task): self;
 
-    public function load(CronProfileMap $profiles): self;
+    public function load(CronProfileMap|CronConfigBuilderInterface $profiles): self;
 
     /** @return array<string, ScheduledTask> */
     public function tasks(): array;
