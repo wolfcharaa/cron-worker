@@ -1,0 +1,15 @@
+/var/
+/vendor/
+/.env.local
+/.php-cs-fixer.php
+/compose.override.yaml
+/phpstan.neon
+/docker/data/
+/release-*.bundle
+/release-*-offline.tar
+
+# Override global excludes: repository-local Codex skills must stay versioned.
+!/.agents/
+!/.agents/skills/
+!/.agents/skills/**
+!/AGENTS.md
