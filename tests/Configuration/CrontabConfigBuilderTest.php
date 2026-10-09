@@ -8,6 +8,8 @@ use Testo\Assert;
 use Testo\Test;
 use Wolfcharaa\Cron\Configuration\Builder\CrontabConfigBuilder;
 use Wolfcharaa\Cron\Configuration\ExecTaskConfig;
+use Wolfcharaa\Cron\Runtime\SchedulerOptions;
+use Wolfcharaa\Cron\Scheduler;
 
 #[Test]
 final class CrontabConfigBuilderTest
@@ -43,5 +45,17 @@ final class CrontabConfigBuilderTest
 
         Assert::instanceOf($task->task, ExecTaskConfig::class);
         Assert::same($task->task->command, 'php bin/health.php');
+    }
+
+    public function loadsExecConfigurationWithoutContainer(): void
+    {
+        $scheduler = new Scheduler(options: new SchedulerOptions(profile: 'prod'));
+        $scheduler->load(new CrontabConfigBuilder(
+            "# cron:name=success\n* * * * * exit 0",
+            profile: 'prod',
+        ));
+        $task = $scheduler->tasks()['success'] ?? throw new \LogicException('Exec task is missing.');
+
+        Assert::same($task->execute(), 0);
     }
 }
