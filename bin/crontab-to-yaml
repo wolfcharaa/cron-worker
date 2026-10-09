@@ -1,0 +1,15 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use Symfony\Component\Console\Application;
+use Wolfcharaa\Cron\Dev\Console\CrontabToYamlCommand;
+
+require dirname(__DIR__) . '/vendor/autoload.php';
+
+$application = new Application('Cron development tools');
+$application->add(new CrontabToYamlCommand());
+$application->setDefaultCommand('cron:crontab-to-yaml', true);
+
+exit($application->run());

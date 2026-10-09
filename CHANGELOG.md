@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   classic crontab files without library-specific directives.
 - Native PHP YAML configuration loading with mvdcake catalog compatibility,
   separate profile settings, one-shot exec chains and a published JSON Schema.
+- A Symfony Console development command for converting classic crontab lists
+  into loadable YAML configuration.
 - Profile-specific attribute pipelines through `ChainConfig`, service task
   configs and external exec task configs.
 - Separate `CronProfileConfig` maps so every profile owns its complete task

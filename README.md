@@ -223,6 +223,21 @@ Loader не добавляет в crontab своих директив: обыч�
 Поэтому ожидание внешнего процесса не блокирует master event loop, а его exit
 code участвует в обычной success-chain семантике.
 
+Для одноразового переноса `crontab -l` в управляемый YAML в dev-зависимостях
+доступна Symfony Console команда:
+
+```shell
+crontab -l | bin/crontab-to-yaml \
+  --profile=prod \
+  --timezone=Europe/Moscow \
+  --schema=../vendor/romanfedorskij/cron/resources/schema/crontab.schema.json \
+  --output=config/crontab.yaml
+```
+
+Для `/etc/crontab` добавляется `--system`. Если `--output` не указан, YAML пишется
+в stdout. Поскольку в классическом crontab нет имён, конвертер создаёт `job-1`,
+`job-2` и так далее; их можно переименовать после конвертации.
+
 ### YAML-конфигурация
 
 `.yaml` и `.yml` файлы читаются напрямую в PHP через `symfony/yaml`. Внешний
@@ -276,6 +291,9 @@ child-worker проверяет, что scheduler уже запущен под �
 перенаправляет stdout и stderr команды в указанный файл в append-режиме.
 
 Несколько loader-ов можно объединить через `CompositeCronConfigLoader`.
+Внешний API в итоге оставляет четыре независимых способа сборки: ручные
+вызовы `task()`/`serviceTask()`, PHP-атрибуты через `AttributeCronConfigLoader`,
+обычный crontab через `CrontabConfigLoader` и YAML через `YamlConfigLoader`.
 
 ## Низкоуровневый cron API
 

@@ -27,6 +27,7 @@
         "phpstan/phpstan-strict-rules": "^2.1",
         "phpyh/coding-standard": "^2.6.3",
         "rector/rector": "^2.7",
+        "symfony/console": "^7.4",
         "testo/testo": "^0.10.55"
     },
     "autoload": {
@@ -36,6 +37,7 @@
     },
     "autoload-dev": {
         "psr-4": {
+            "Wolfcharaa\\Cron\\Dev\\": "dev/",
             "Wolfcharaa\\Cron\\Tests\\": "tests/"
         }
     },
