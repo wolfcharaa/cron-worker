@@ -28,13 +28,9 @@ final class ExecTaskHandlerTest
 
     public function validatesUserAndAppendsCommandOutput(): void
     {
-        $account = posix_getpwuid(posix_geteuid());
-
-        if ($account === false) {
-            throw new \RuntimeException('Unable to resolve the current Unix user.');
-        }
-
-        $user = $account['name'];
+        $effectiveUserId = posix_geteuid();
+        $account = posix_getpwuid($effectiveUserId);
+        $user = $account === false ? (string) $effectiveUserId : $account['name'];
         $output = tempnam(sys_get_temp_dir(), 'cron-exec-');
 
         if ($output === false) {

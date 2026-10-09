@@ -53,14 +53,18 @@ final readonly class ExecTaskHandler implements TaskHandler
             return;
         }
 
-        $account = posix_getpwuid(posix_geteuid());
+        $effectiveUserId = posix_geteuid();
+        $account = posix_getpwuid($effectiveUserId);
         $actualUser = $account === false ? null : $account['name'];
+        $matchesUserName = $actualUser === $this->expectedUser;
+        $matchesUserId = ctype_digit($this->expectedUser)
+            && (int) $this->expectedUser === $effectiveUserId;
 
-        if ($actualUser !== $this->expectedUser) {
+        if (!$matchesUserName && !$matchesUserId) {
             throw new \RuntimeException(\sprintf(
                 'Cron command expects Unix user "%s", running as "%s".',
                 $this->expectedUser,
-                $actualUser ?? 'unknown',
+                $actualUser ?? (string) $effectiveUserId,
             ));
         }
     }

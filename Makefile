@@ -2,6 +2,7 @@ SHELL := /bin/sh
 
 DOCKER ?= docker
 DOCKER_COMPOSE ?= $(DOCKER) compose
+export DOCKER_USER ?= $(shell id -u):$(shell id -g)
 export COMPOSER_CACHE_DIR ?= $(HOME)/.cache/composer
 export PHP_VERSION ?= 8.2
 
