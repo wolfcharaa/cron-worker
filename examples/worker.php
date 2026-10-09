@@ -9,13 +9,11 @@ require dirname(__DIR__) . '/vendor/autoload.php';
 
 $scheduler = new Scheduler(new SchedulerOptions(maxConcurrency: 2));
 
-$scheduler->cron(
-    name: 'heartbeat',
-    expression: '* * * * *',
-    handler: static function (): void {
+$scheduler
+    ->task('heartbeat', static function (): void {
         fwrite(STDOUT, sprintf("[%s] child %d executed heartbeat\n", date(DATE_ATOM), getmypid()));
-    },
-    timezone: 'Europe/Moscow',
-);
+    })
+    ->everyMinute()
+    ->timezone('Europe/Moscow');
 
 $scheduler->run();

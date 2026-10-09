@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Fluent task and schedule builders with typed minute, hour, day and month
+  interval configurations.
+- Configurable `CronExpression` value object with parsing and serialization of
+  individual cron rules.
 - Revolt-based cron scheduler runtime.
 - PCNTL process supervisor with non-blocking child reaping.
 - Cron schedules, overlap protection, concurrency limits and graceful shutdown.

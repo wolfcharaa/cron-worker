@@ -6,6 +6,7 @@ namespace Wolfcharaa\Cron\Tests\Schedule;
 
 use Testo\Assert;
 use Testo\Test;
+use Wolfcharaa\Cron\Schedule\CronExpression;
 use Wolfcharaa\Cron\Schedule\CronSchedule;
 
 #[Test]
@@ -27,5 +28,18 @@ final class CronScheduleTest
         $nextRun = $schedule->nextRunAfter(new \DateTimeImmutable('2026-10-09 20:59:00 UTC'));
 
         Assert::same($nextRun->format('Y-m-d H:i:s P'), '2026-10-10 00:00:00 +03:00');
+    }
+
+    public function acceptsConfiguredExpressionObject(): void
+    {
+        $expression = (new CronExpression())
+            ->withMinute(15)
+            ->withHour(10);
+        $schedule = new CronSchedule($expression);
+
+        $nextRun = $schedule->nextRunAfter(new \DateTimeImmutable('2026-10-09 09:59:00 UTC'));
+
+        Assert::same($schedule->expression, $expression);
+        Assert::same($nextRun->format('Y-m-d H:i:s P'), '2026-10-09 10:15:00 +00:00');
     }
 }

@@ -4,25 +4,28 @@ declare(strict_types=1);
 
 namespace Wolfcharaa\Cron\Schedule;
 
-use Cron\CronExpression;
+use Cron\CronExpression as CronExpressionParser;
 
 final readonly class CronSchedule implements Schedule
 {
-    private CronExpression $cron;
+    public CronExpression $expression;
+
+    private CronExpressionParser $parser;
 
     private \DateTimeZone $timezone;
 
     public function __construct(
-        public string $expression,
+        CronExpression|string $expression = CronExpression::DEFAULT,
         \DateTimeZone|string $timezone = 'UTC',
     ) {
-        $this->cron = new CronExpression($expression);
+        $this->expression = \is_string($expression) ? new CronExpression($expression) : $expression;
+        $this->parser = new CronExpressionParser($this->expression->toString());
         $this->timezone = \is_string($timezone) ? new \DateTimeZone($timezone) : $timezone;
     }
 
     public function nextRunAfter(\DateTimeImmutable $after): \DateTimeImmutable
     {
-        $nextRun = $this->cron->getNextRunDate(
+        $nextRun = $this->parser->getNextRunDate(
             currentTime: $after,
             allowCurrentDate: false,
             timeZone: $this->timezone->getName(),

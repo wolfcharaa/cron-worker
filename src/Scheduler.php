@@ -13,13 +13,15 @@ use Wolfcharaa\Cron\Process\PcntlProcessSupervisor;
 use Wolfcharaa\Cron\Process\ProcessSupervisor;
 use Wolfcharaa\Cron\Runtime\RevoltSchedulerRuntime;
 use Wolfcharaa\Cron\Runtime\SchedulerOptions;
+use Wolfcharaa\Cron\Schedule\CronExpression;
 use Wolfcharaa\Cron\Schedule\CronSchedule;
 use Wolfcharaa\Cron\Task\OverlapPolicy;
 use Wolfcharaa\Cron\Task\ScheduledTask;
+use Wolfcharaa\Cron\Task\ScheduledTaskBuilder;
 
 final class Scheduler
 {
-    /** @var array<string, ScheduledTask> */
+    /** @var array<string, ScheduledTask|ScheduledTaskBuilder> */
     private array $tasks = [];
 
     private readonly RevoltSchedulerRuntime $runtime;
@@ -39,9 +41,22 @@ final class Scheduler
     }
 
     /** @param callable(): mixed $handler */
+    public function task(string $name, callable $handler): ScheduledTaskBuilder
+    {
+        if (isset($this->tasks[$name])) {
+            throw new DuplicateTask($name);
+        }
+
+        $builder = new ScheduledTaskBuilder($name, $handler);
+        $this->tasks[$name] = $builder;
+
+        return $builder;
+    }
+
+    /** @param callable(): mixed $handler */
     public function cron(
         string $name,
-        string $expression,
+        CronExpression|string $expression,
         callable $handler,
         \DateTimeZone|string $timezone = 'UTC',
         OverlapPolicy $overlapPolicy = OverlapPolicy::Forbid,
@@ -67,6 +82,12 @@ final class Scheduler
 
     public function run(): void
     {
-        $this->runtime->run($this->tasks);
+        $tasks = [];
+
+        foreach ($this->tasks as $name => $task) {
+            $tasks[$name] = $task instanceof ScheduledTaskBuilder ? $task->build() : $task;
+        }
+
+        $this->runtime->run($tasks);
     }
 }

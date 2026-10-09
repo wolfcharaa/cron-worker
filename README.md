@@ -21,6 +21,8 @@ composer require romanfedorskij/cron
 declare(strict_types=1);
 
 use Wolfcharaa\Cron\Runtime\SchedulerOptions;
+use Wolfcharaa\Cron\Schedule\CronExpression;
+use Wolfcharaa\Cron\Schedule\Frequency\EveryTime;
 use Wolfcharaa\Cron\Scheduler;
 
 require __DIR__ . '/vendor/autoload.php';
@@ -29,18 +31,65 @@ $scheduler = new Scheduler(
     new SchedulerOptions(maxConcurrency: 4),
 );
 
-$scheduler->cron(
-    name: 'cleanup',
-    expression: '*/5 * * * *',
-    handler: static function (): int {
+$scheduler
+    ->task('cleanup', static function (): int {
         // Блокирующая работа безопасна для master event loop: этот код
         // выполняется в дочернем процессе.
         return 0;
-    },
-    timezone: 'Europe/Moscow',
-);
+    })
+    ->everyMinutes(5)
+    ->weekdays()
+    ->timezone('Europe/Moscow')
+    ->withoutOverlapping();
 
 $scheduler->run();
+```
+
+Для обычных сценариев знать синтаксис cron не требуется:
+
+```php
+$scheduler->task('heartbeat', $handler)->everyMinute();
+$scheduler->task('sync', $handler)->everyMinutes(15);
+$scheduler->task('refresh', $handler)->hourlyAt(10);
+$scheduler->task('report', $handler)->dailyAt(9, 30)->weekdays();
+$scheduler->task('archive', $handler)->everyDays(3)->at(2);
+$scheduler->task('billing', $handler)->monthly()->at(4, 15);
+```
+
+Интервалы представлены отдельными типами над абстрактным `EveryTime`. Их можно
+передавать в builder явно, когда конфигурация создаётся отдельно:
+
+```php
+$interval = EveryTime::minutes(15);
+
+$scheduler->task('sync', $handler)->every($interval);
+```
+
+Доступны интервалы в минутах, часах, днях и месяцах. Это календарные интервалы:
+например, `everyMinutes(15)` преобразуется в `*/15 * * * *`, а
+`everyHours(4)` — в `0 */4 * * *`.
+
+## Низкоуровневый cron API
+
+`CronExpression` можно создать из готовой строки или собрать по отдельным
+правилам. Пустой объект соответствует запуску каждую минуту:
+
+```php
+$parsed = new CronExpression('15 2 * * MON-FRI');
+
+$configured = (new CronExpression())
+    ->withMinute(15)
+    ->withHour(2)
+    ->withDayOfWeek('MON-FRI');
+
+echo $configured->toString(); // 15 2 * * MON-FRI
+```
+
+Объект неизменяемый: каждый метод `with*()` возвращает новый экземпляр. Строка
+по-прежнему поддерживается как сокращённая запись:
+
+```php
+$scheduler->cron('legacy-task', '*/5 * * * *', $handler, 'Europe/Moscow');
 ```
 
 Callable должен вернуть `null` или exit code от `0` до `255`. По умолчанию
