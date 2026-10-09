@@ -9,8 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Extensible cron configuration builders for Composer attribute discovery,
-  classic crontab files and YAML profiles rendered by an external Lua helper.
+- Extensible cron configuration loaders for explicit attribute discovery and
+  classic crontab files.
 - Profile-specific attribute pipelines through `ChainConfig`, service task
   configs and external exec task configs.
 - Separate `CronProfileConfig` maps so every profile owns its complete task

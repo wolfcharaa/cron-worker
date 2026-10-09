@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Wolfcharaa\Cron\Configuration\Builder;
+namespace Wolfcharaa\Cron\Configuration\Loader;
 
 use Wolfcharaa\Cron\Configuration\ExecTaskConfig;
 use Wolfcharaa\Cron\Configuration\Profile;
 use Wolfcharaa\Cron\Registry\CronProfileMap;
 use Wolfcharaa\Cron\Registry\CronTaskDefinition;
 
-final readonly class CrontabConfigBuilder implements CronConfigBuilderInterface
+final readonly class CrontabConfigLoader implements CronConfigLoaderInterface
 {
     private Profile $profile;
 
@@ -40,7 +40,7 @@ final readonly class CrontabConfigBuilder implements CronConfigBuilderInterface
         $this->timezone = \is_string($timezone) ? new \DateTimeZone($timezone) : $timezone;
     }
 
-    public function build(): CronProfileMap
+    public function load(): CronProfileMap
     {
         $map = new CronProfileMap();
         $environment = [];

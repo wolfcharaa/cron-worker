@@ -171,22 +171,28 @@ final class UploadPreparedPackages
 Каждый следующий сервис запускается отдельным worker-процессом только после
 exit code `0` предыдущего; его cron-расписание для этого не требуется.
 
-В обычном Composer-приложении не нужно перечислять классы или директории
-вручную: builder читает PSR-4 roots из `composer.json`, обходит проект и строит
-профильную hash map до запуска event loop:
+Какие классы обходить, решает бинарная команда приложения. Например,
+`bin/cron.php` может явно указать namespace и каталог команд, после чего
+loader построит профильную hash map до запуска event loop:
 
 ```php
-use Wolfcharaa\Cron\Configuration\Builder\AttributeCronConfigBuilder;
+use Wolfcharaa\Cron\Configuration\Loader\AttributeCronConfigLoader;
+use Wolfcharaa\Cron\Discovery\Psr4DirectoryClassProvider;
 
 $scheduler
-    ->load(AttributeCronConfigBuilder::forProject(dirname(__DIR__)))
+    ->load(new AttributeCronConfigLoader(
+        new Psr4DirectoryClassProvider([
+            'App\\Command\\' => dirname(__DIR__) . '/src/Command',
+        ]),
+    ))
     ->run();
 ```
 
-Для нестандартной раскладки можно передать builder-у `ClassListProvider`,
+Вместо обхода каталога loader-у можно передать `ClassListProvider`,
 `Psr4DirectoryClassProvider`, `ComposerClassMapProvider`, `ChainClassProvider`
-или `RegexFilterClassProvider`. Несколько источников объединяются через
-`CompositeCronConfigBuilder`. Карта проверяет конфликты имён внутри каждого
+или `RegexFilterClassProvider`. Несколько источников конфигурации объединяются
+через
+`CompositeCronConfigLoader`. Карта проверяет конфликты имён внутри каждого
 профиля до запуска воркера. Класс команды считается service id и извлекается
 из свежего PSR-11 контейнера в child-процессе.
 
@@ -195,16 +201,16 @@ $scheduler
 Готовый user crontab можно подключить как отдельную конфигурацию профиля:
 
 ```php
-use Wolfcharaa\Cron\Configuration\Builder\CrontabConfigBuilder;
+use Wolfcharaa\Cron\Configuration\Loader\CrontabConfigLoader;
 
-$scheduler->load(CrontabConfigBuilder::fromFile(
+$scheduler->load(CrontabConfigLoader::fromFile(
     path: dirname(__DIR__) . '/config/cron/prod.crontab',
     profile: 'prod',
 ));
 ```
 
 Для стабильного имени задачи перед строкой используется комментарий
-`# cron:name=cleanup`; без него builder создаёт детерминированное имя из
+`# cron:name=cleanup`; без него loader создаёт детерминированное имя из
 расписания и команды. Формат `/etc/crontab` с колонкой пользователя включается
 через `systemFormat: true`. Сам scheduler не меняет Unix-пользователя: сервис
 должен быть заранее запущен под нужным аккаунтом.
@@ -213,43 +219,7 @@ $scheduler->load(CrontabConfigBuilder::fromFile(
 Поэтому ожидание внешнего процесса не блокирует master event loop, а его exit
 code участвует в обычной success-chain семантике.
 
-### YAML-профили через Lua renderer
-
-Каталог формата `mvdcake/docker/php/cron/profiles.yaml` подключается через уже
-существующий Lua renderer. Один builder всегда собирает один выбранный профиль:
-
-```php
-use Wolfcharaa\Cron\Configuration\Builder\LuaProfileConfigBuilder;
-
-$scheduler->load(new LuaProfileConfigBuilder(
-    rendererCommand: [
-        'lua5.3',
-        dirname(__DIR__) . '/docker/php/render-cron-profile.lua',
-    ],
-    catalog: dirname(__DIR__) . '/docker/php/cron/profiles.yaml',
-    profile: $activeProfile,
-));
-```
-
-Builder вызывает renderer с `--format summary` и `--format commands`, проверяет
-число задач и собирает exec-конфигурацию. YAML остаётся ответственностью Lua
-скрипта, поэтому библиотеке не требуется ещё один YAML parser и сохраняется
-тот же смысл профилей, который уже проверяется в `mvdcake`.
-
-Атрибуты, crontab и Lua можно объединять:
-
-```php
-use Wolfcharaa\Cron\Configuration\Builder\AttributeCronConfigBuilder;
-use Wolfcharaa\Cron\Configuration\Builder\CompositeCronConfigBuilder;
-use Wolfcharaa\Cron\Configuration\Builder\CrontabConfigBuilder;
-use Wolfcharaa\Cron\Configuration\Builder\LuaProfileConfigBuilder;
-
-$scheduler->load(new CompositeCronConfigBuilder(
-    AttributeCronConfigBuilder::forProject(dirname(__DIR__)),
-    CrontabConfigBuilder::fromFile($crontab, profile: $activeProfile),
-    new LuaProfileConfigBuilder($renderer, $catalog, profile: $activeProfile),
-));
-```
+Несколько loader-ов можно объединить через `CompositeCronConfigLoader`.
 
 ## Низкоуровневый cron API
 

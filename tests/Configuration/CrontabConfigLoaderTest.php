@@ -6,23 +6,23 @@ namespace Wolfcharaa\Cron\Tests\Configuration;
 
 use Testo\Assert;
 use Testo\Test;
-use Wolfcharaa\Cron\Configuration\Builder\CrontabConfigBuilder;
 use Wolfcharaa\Cron\Configuration\ExecTaskConfig;
+use Wolfcharaa\Cron\Configuration\Loader\CrontabConfigLoader;
 use Wolfcharaa\Cron\Runtime\SchedulerOptions;
 use Wolfcharaa\Cron\Scheduler;
 
 #[Test]
-final class CrontabConfigBuilderTest
+final class CrontabConfigLoaderTest
 {
-    public function buildsExecTasksFromUserCrontab(): void
+    public function loadsExecTasksFromUserCrontab(): void
     {
-        $map = (new CrontabConfigBuilder(<<<'CRON'
+        $map = (new CrontabConfigLoader(<<<'CRON'
             SHELL=/bin/bash
             PATH=/usr/local/bin:/usr/bin
             # cron:name=cleanup
             */15 * * * * php bin/console app:cleanup
             @daily php bin/console app:archive
-            CRON, profile: 'prod'))->build();
+            CRON, profile: 'prod'))->load();
 
         $tasks = $map->forProfile('prod');
         $first = $tasks[0] ?? throw new \LogicException('First crontab task is missing.');
@@ -36,11 +36,11 @@ final class CrontabConfigBuilderTest
 
     public function readsSystemCrontabUserColumn(): void
     {
-        $map = (new CrontabConfigBuilder(
+        $map = (new CrontabConfigLoader(
             '# cron:name=health' . "\n" . '*/5 * * * * www-data php bin/health.php',
             profile: 'stage',
             systemFormat: true,
-        ))->build();
+        ))->load();
         $task = $map->forProfile('stage')[0] ?? throw new \LogicException('System crontab task is missing.');
 
         Assert::instanceOf($task->task, ExecTaskConfig::class);
@@ -50,7 +50,7 @@ final class CrontabConfigBuilderTest
     public function loadsExecConfigurationWithoutContainer(): void
     {
         $scheduler = new Scheduler(options: new SchedulerOptions(profile: 'prod'));
-        $scheduler->load(new CrontabConfigBuilder(
+        $scheduler->load(new CrontabConfigLoader(
             "# cron:name=success\n* * * * * exit 0",
             profile: 'prod',
         ));
