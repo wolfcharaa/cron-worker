@@ -13,6 +13,7 @@ use Wolfcharaa\Cron\Schedule\Frequency\EveryTime;
 use Wolfcharaa\Cron\Schedule\ScheduleBuilder;
 use Wolfcharaa\Cron\Task\Handler\ContainerCallbackHandler;
 use Wolfcharaa\Cron\Task\Handler\ContainerServiceHandler;
+use Wolfcharaa\Cron\Task\Handler\StaticTaskHandler;
 use Wolfcharaa\Cron\Task\Handler\TaskHandler;
 
 final class ScheduledTaskBuilder
@@ -198,10 +199,27 @@ final class ScheduledTaskBuilder
         return $this->next;
     }
 
-    /** @param callable(ContainerInterface, TaskExecutionContext): mixed $handler */
-    public function thenContainer(string $name, callable $handler): OneShotTaskBuilder
+    /**
+     * @param callable(ContainerInterface, TaskExecutionContext, mixed...): mixed $handler
+     * @param list<mixed> $arguments
+     */
+    public function thenContainer(string $name, callable $handler, array $arguments = []): OneShotTaskBuilder
     {
-        return $this->then($name, new ContainerCallbackHandler($this->requireContainerFactory(), $handler));
+        return $this->then($name, new ContainerCallbackHandler(
+            $this->requireContainerFactory(),
+            $handler,
+            $arguments,
+        ));
+    }
+
+    /** @param list<mixed> $arguments */
+    public function thenStatic(
+        string $name,
+        string $class,
+        string $method,
+        array $arguments = [],
+    ): OneShotTaskBuilder {
+        return $this->then($name, new StaticTaskHandler($class, $method, $arguments));
     }
 
     /** @param array<int|string, mixed> $arguments */

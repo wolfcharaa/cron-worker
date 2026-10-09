@@ -24,12 +24,14 @@ use Wolfcharaa\Cron\Schedule\CronExpression;
 use Wolfcharaa\Cron\Schedule\CronSchedule;
 use Wolfcharaa\Cron\Task\Handler\ContainerCallbackHandler;
 use Wolfcharaa\Cron\Task\Handler\ContainerServiceHandler;
+use Wolfcharaa\Cron\Task\Handler\StaticTaskHandler;
 use Wolfcharaa\Cron\Task\Handler\TaskHandler;
 use Wolfcharaa\Cron\Task\OneShotTaskBuilder;
 use Wolfcharaa\Cron\Task\OverlapPolicy;
 use Wolfcharaa\Cron\Task\ScheduledTask;
 use Wolfcharaa\Cron\Task\ScheduledTaskBuilder;
 use Wolfcharaa\Cron\Task\TaskExecutionContext;
+use Wolfcharaa\Cron\Validation\CronConfigValidator;
 
 final class Scheduler implements SchedulerInterface
 {
@@ -42,6 +44,8 @@ final class Scheduler implements SchedulerInterface
 
     private readonly Profile $profile;
 
+    private readonly CronConfigValidator $validator;
+
     /** @param ContainerFactory|(callable(): ContainerInterface)|null $containerFactory */
     public function __construct(
         ?SchedulerOptions $options = null,
@@ -49,9 +53,11 @@ final class Scheduler implements SchedulerInterface
         ?LoggerInterface $logger = null,
         ?ProcessSupervisor $supervisor = null,
         null|ContainerFactory|callable $containerFactory = null,
+        ?CronConfigValidator $validator = null,
     ) {
         $options ??= new SchedulerOptions();
         $this->profile = $options->profile;
+        $this->validator = $validator ?? new CronConfigValidator();
         $this->containerFactory = match (true) {
             $containerFactory instanceof ContainerFactory => $containerFactory,
             $containerFactory !== null => new CallableContainerFactory($containerFactory),
@@ -82,10 +88,27 @@ final class Scheduler implements SchedulerInterface
         return $builder;
     }
 
-    /** @param callable(ContainerInterface, TaskExecutionContext): mixed $handler */
-    public function containerTask(string $name, callable $handler): ScheduledTaskBuilder
+    /**
+     * @param callable(ContainerInterface, TaskExecutionContext, mixed...): mixed $handler
+     * @param list<mixed> $arguments
+     */
+    public function containerTask(string $name, callable $handler, array $arguments = []): ScheduledTaskBuilder
     {
-        return $this->task($name, new ContainerCallbackHandler($this->requireContainerFactory(), $handler));
+        return $this->task($name, new ContainerCallbackHandler(
+            $this->requireContainerFactory(),
+            $handler,
+            $arguments,
+        ));
+    }
+
+    /** @param list<mixed> $arguments */
+    public function staticTask(
+        string $name,
+        string $class,
+        string $method,
+        array $arguments = [],
+    ): ScheduledTaskBuilder {
+        return $this->task($name, new StaticTaskHandler($class, $method, $arguments));
     }
 
     /** @param array<int|string, mixed> $arguments */
@@ -135,6 +158,8 @@ final class Scheduler implements SchedulerInterface
         if ($profiles instanceof CronConfigLoaderInterface) {
             $profiles = $profiles->load();
         }
+
+        $this->validator->assertValid($profiles, $this->containerFactory, $this->profile);
 
         foreach ($profiles->forProfile($this->profile) as $task) {
             $builder = $this

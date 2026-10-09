@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Wolfcharaa\Cron\Task\Handler;
 
 use Wolfcharaa\Cron\Task\TaskExecutionContext;
+use Wolfcharaa\Cron\Validation\CallableTaskValidator;
 
 final readonly class CallableTaskHandler implements TaskHandler
 {
@@ -14,6 +15,7 @@ final readonly class CallableTaskHandler implements TaskHandler
     /** @param callable(): mixed $handler */
     public function __construct(callable $handler)
     {
+        (new CallableTaskValidator())->validateCallable($handler);
         $this->handler = \Closure::fromCallable($handler);
     }
 

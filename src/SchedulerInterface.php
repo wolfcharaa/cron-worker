@@ -19,8 +19,19 @@ interface SchedulerInterface
     /** @param (callable(): mixed)|TaskHandler $handler */
     public function task(string $name, callable|TaskHandler $handler): ScheduledTaskBuilder;
 
-    /** @param callable(ContainerInterface, TaskExecutionContext): mixed $handler */
-    public function containerTask(string $name, callable $handler): ScheduledTaskBuilder;
+    /**
+     * @param callable(ContainerInterface, TaskExecutionContext, mixed...): mixed $handler
+     * @param list<mixed> $arguments
+     */
+    public function containerTask(string $name, callable $handler, array $arguments = []): ScheduledTaskBuilder;
+
+    /** @param list<mixed> $arguments */
+    public function staticTask(
+        string $name,
+        string $class,
+        string $method,
+        array $arguments = [],
+    ): ScheduledTaskBuilder;
 
     /** @param array<int|string, mixed> $arguments */
     public function serviceTask(

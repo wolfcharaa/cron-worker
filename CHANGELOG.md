@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Static and container-callback chain task configs with preflight callable and
+  profile-map validation before scheduler registration.
 - Runtime platform contract tests for PCNTL and POSIX support.
 - Isolated PHP 8.2-8.5 test matrix for lowest and highest dependency sets.
 - Copyable application worker bootstrap for composing attribute, YAML,

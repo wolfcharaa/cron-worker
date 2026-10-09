@@ -7,6 +7,7 @@ namespace Wolfcharaa\Cron\Tests\Task;
 use Testo\Assert;
 use Testo\Expect;
 use Testo\Test;
+use Wolfcharaa\Cron\Exception\InvalidTaskCallable;
 use Wolfcharaa\Cron\Exception\InvalidTaskResult;
 use Wolfcharaa\Cron\Schedule\CronSchedule;
 use Wolfcharaa\Cron\Task\ScheduledTask;
@@ -30,9 +31,15 @@ final class ScheduledTaskTest
 
     public function rejectsInvalidResult(): void
     {
-        $task = new ScheduledTask('invalid-task', new CronSchedule('* * * * *'), static fn(): string => 'done');
+        $task = new ScheduledTask('invalid-task', new CronSchedule('* * * * *'), static fn() => 'done');
 
         Expect::exception(InvalidTaskResult::class);
         $task->execute();
+    }
+
+    public function rejectsDeclaredInvalidResultBeforeExecution(): void
+    {
+        Expect::exception(InvalidTaskCallable::class);
+        new ScheduledTask('invalid-task', new CronSchedule('* * * * *'), static fn(): string => 'done');
     }
 }

@@ -9,6 +9,7 @@ use Wolfcharaa\Cron\Container\ContainerFactory;
 use Wolfcharaa\Cron\Exception\MissingContainerFactory;
 use Wolfcharaa\Cron\Task\Handler\ContainerCallbackHandler;
 use Wolfcharaa\Cron\Task\Handler\ContainerServiceHandler;
+use Wolfcharaa\Cron\Task\Handler\StaticTaskHandler;
 use Wolfcharaa\Cron\Task\Handler\TaskHandler;
 
 final class OneShotTaskBuilder
@@ -41,10 +42,27 @@ final class OneShotTaskBuilder
         return $this->next;
     }
 
-    /** @param callable(ContainerInterface, TaskExecutionContext): mixed $handler */
-    public function thenContainer(string $name, callable $handler): self
+    /**
+     * @param callable(ContainerInterface, TaskExecutionContext, mixed...): mixed $handler
+     * @param list<mixed> $arguments
+     */
+    public function thenContainer(string $name, callable $handler, array $arguments = []): self
     {
-        return $this->then($name, new ContainerCallbackHandler($this->requireContainerFactory(), $handler));
+        return $this->then($name, new ContainerCallbackHandler(
+            $this->requireContainerFactory(),
+            $handler,
+            $arguments,
+        ));
+    }
+
+    /** @param list<mixed> $arguments */
+    public function thenStatic(
+        string $name,
+        string $class,
+        string $method,
+        array $arguments = [],
+    ): self {
+        return $this->then($name, new StaticTaskHandler($class, $method, $arguments));
     }
 
     /** @param array<int|string, mixed> $arguments */
