@@ -17,15 +17,16 @@ final class CrontabConfigLoaderTest
 {
     public function loadsExecTasksFromUserCrontab(): void
     {
-        $map = (new CrontabConfigLoader(<<<'CRON_WRAP'
-        SHELL=/bin/bash
-        PATH=/usr/local/bin:/usr/bin
-        HOME=/var/www/app
-        CRON_TZ=Europe/Moscow
-        # An ordinary crontab comment.
-        */15 * * * * php bin/console app:cleanup
-        @daily php bin/console app:archive
-        CRON_WRAP, profile: 'prod'))->load();
+        $contents = implode("\n", [
+            'SHELL=/bin/bash',
+            'PATH=/usr/local/bin:/usr/bin',
+            'HOME=/var/www/app',
+            'CRON_TZ=Europe/Moscow',
+            '# An ordinary crontab comment.',
+            '*/15 * * * * php bin/console app:cleanup',
+            '@daily php bin/console app:archive',
+        ]);
+        $map = (new CrontabConfigLoader($contents, profile: 'prod'))->load();
 
         $tasks = $map->forProfile('prod');
         $first = $tasks[0] ?? throw new \LogicException('First crontab task is missing.');
