@@ -45,7 +45,6 @@ final readonly class CrontabConfigLoader implements CronConfigLoaderInterface
         $map = new CronProfileMap();
         $environment = [];
         $shell = '/bin/sh';
-        $pendingName = null;
         $lines = preg_split('/\R/', $this->contents);
 
         if ($lines === false) {
@@ -56,12 +55,6 @@ final readonly class CrontabConfigLoader implements CronConfigLoaderInterface
             $line = trim($line);
 
             if ($line === '') {
-                continue;
-            }
-
-            if (preg_match('/^#\s*cron:name\s*=\s*([A-Za-z0-9_.:-]+)\s*$/', $line, $matches) === 1) {
-                $pendingName = $matches[1];
-
                 continue;
             }
 
@@ -79,26 +72,29 @@ final readonly class CrontabConfigLoader implements CronConfigLoaderInterface
                 continue;
             }
 
-            [$expression, $command] = $this->parseJob($line, $lineNumber + 1);
-            $name = $pendingName ?? $this->generatedName($expression, $command);
-            $pendingName = null;
+            [$expression, $command, $user] = $this->parseJob($line, $lineNumber + 1);
+            $name = $this->generatedName($expression, $command, $lineNumber + 1);
             $map->add(new CronTaskDefinition(
                 task: new ExecTaskConfig(
                     taskName: $name,
                     command: $command,
+                    workingDirectory: $environment['HOME'] ?? null,
                     environment: $environment,
                     shell: $shell,
+                    expectedUser: $user,
                 ),
                 expression: $expression,
                 profile: $this->profile,
-                timezone: $this->timezone,
+                timezone: isset($environment['CRON_TZ'])
+                    ? new \DateTimeZone($environment['CRON_TZ'])
+                    : $this->timezone,
             ));
         }
 
         return $map;
     }
 
-    /** @return array{string, string} */
+    /** @return array{string, string, ?string} */
     private function parseJob(string $line, int $lineNumber): array
     {
         if (str_starts_with($line, '@')) {
@@ -112,6 +108,7 @@ final readonly class CrontabConfigLoader implements CronConfigLoaderInterface
             return [
                 $this->requiredPart($parts, 0, $lineNumber, $line),
                 $this->requiredPart($parts, $this->systemFormat ? 2 : 1, $lineNumber, $line),
+                $this->systemFormat ? $this->requiredPart($parts, 1, $lineNumber, $line) : null,
             ];
         }
 
@@ -125,12 +122,19 @@ final readonly class CrontabConfigLoader implements CronConfigLoaderInterface
         $expression = implode(' ', \array_slice($parts, 0, 5));
         $command = $this->requiredPart($parts, $this->systemFormat ? 6 : 5, $lineNumber, $line);
 
-        return [$expression, $command];
+        return [
+            $expression,
+            $command,
+            $this->systemFormat ? $this->requiredPart($parts, 5, $lineNumber, $line) : null,
+        ];
     }
 
-    private function generatedName(string $expression, string $command): string
+    private function generatedName(string $expression, string $command, int $lineNumber): string
     {
-        return 'exec-' . substr(hash('sha256', $this->profile->name . "\0" . $expression . "\0" . $command), 0, 12);
+        return 'exec-' . substr(hash(
+            'sha256',
+            $this->profile->name . "\0" . $lineNumber . "\0" . $expression . "\0" . $command,
+        ), 0, 12);
     }
 
     private function invalidLine(int $lineNumber, string $line): \InvalidArgumentException
