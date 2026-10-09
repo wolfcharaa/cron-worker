@@ -123,4 +123,20 @@ final class YamlConfigLoaderTest
                 jobs: []
             YAML))->load();
     }
+
+    public function rejectsInvalidProfileMetadata(): void
+    {
+        Expect::exception(InvalidCronConfiguration::class);
+
+        (new YamlConfigLoader(<<<'YAML'
+            version: 1
+            profiles:
+              default:
+                description: true
+                jobs:
+                  - name: heartbeat
+                    schedule: "* * * * *"
+                    command: php bin/heartbeat.php
+            YAML))->load();
+    }
 }

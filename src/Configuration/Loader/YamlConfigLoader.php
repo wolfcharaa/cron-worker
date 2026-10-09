@@ -46,6 +46,7 @@ final readonly class YamlConfigLoader implements CronConfigLoaderInterface
 
         $root = $this->mapping($document, '$');
         $this->onlyKeys($root, ['version', '$schema', 'defaults', 'profiles'], '$');
+        $this->optionalString($root, '$schema', '$');
 
         if (\array_key_exists('version', $root) && $root['version'] !== 1) {
             throw $this->invalid('$.version', 'must be the integer 1.');
@@ -104,6 +105,7 @@ final readonly class YamlConfigLoader implements CronConfigLoaderInterface
             'log',
             'jobs',
         ], $path);
+        $this->optionalText($config, 'description', $path);
 
         $timezone = $this->optionalString($config, 'timezone', $path)
             ?? $this->optionalString($defaults, 'timezone', '$.defaults')
@@ -331,6 +333,22 @@ final readonly class YamlConfigLoader implements CronConfigLoaderInterface
 
         if (!\is_string($value) || trim($value) === '') {
             throw $this->invalid($path . '.' . $key, 'must be a non-empty string.');
+        }
+
+        return $value;
+    }
+
+    /** @param array<array-key, mixed> $values */
+    private function optionalText(array $values, string $key, string $path): ?string
+    {
+        if (!\array_key_exists($key, $values)) {
+            return null;
+        }
+
+        $value = $values[$key];
+
+        if (!\is_string($value)) {
+            throw $this->invalid($path . '.' . $key, 'must be a string.');
         }
 
         return $value;
