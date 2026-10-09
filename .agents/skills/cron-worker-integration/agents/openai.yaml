@@ -1,0 +1,4 @@
+interface:
+  display_name: "Cron Worker Integration"
+  short_description: "Migrate application cron jobs into cron-worker"
+  default_prompt: "Use $cron-worker-integration to discover and migrate this application's cron configuration."

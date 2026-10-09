@@ -22,6 +22,7 @@ Master использует Revolt для неблокирующего ожид�
 | --- | --- | --- |
 | Fluent schedule API | `everyMinutes()`, `dailyAt()`, `weekdays()` без ручного cron | [Scheduling и profiles](docs/reference/scheduling-and-profiles.md) |
 | Configuration loaders | Manual API, attributes, YAML и классический crontab | [Configuration sources](docs/guides/configuration-sources.md) |
+| Guided migration | Готовый Codex skill для переноса cron реального приложения | [Application migration](docs/guides/application-migration.md) |
 | Success chains | Одноразовые callable, service, static, container и exec шаги | [Task chains](docs/guides/task-chains.md) |
 | PSR-11 integration | Новый container scope внутри каждого child-worker | [Container contract](docs/reference/container-contract.md) |
 | Preflight validation | Ошибки карты и callable до регистрации задач | [Configuration validation](docs/reference/configuration-validation.md) |
@@ -72,10 +73,11 @@ manual / attributes / YAML / crontab
 
 1. [Quick start](docs/guides/quick-start.md) — первый ручной scheduler.
 2. [Configuration sources](docs/guides/configuration-sources.md) — выбор loader-а и profiles.
-3. [Task chains](docs/guides/task-chains.md) — service/static/container pipelines.
-4. [Application worker](docs/examples/application-worker.md) — полный `bin/cron.php`.
-5. [Runtime](docs/reference/runtime.md) — fork, Revolt, overlap и shutdown.
-6. [Configuration validation](docs/reference/configuration-validation.md) — fail-fast контракт.
+3. [Application migration](docs/guides/application-migration.md) — перенос существующих cron-задач с помощью skill.
+4. [Task chains](docs/guides/task-chains.md) — service/static/container pipelines.
+5. [Application worker](docs/examples/application-worker.md) — полный `bin/cron.php`.
+6. [Runtime](docs/reference/runtime.md) — fork, Revolt, overlap и shutdown.
+7. [Configuration validation](docs/reference/configuration-validation.md) — fail-fast контракт.
 
 ## Установка
 
@@ -157,6 +159,7 @@ public static function notify(
 
 - [Quick start](docs/guides/quick-start.md)
 - [Configuration sources](docs/guides/configuration-sources.md)
+- [Application migration](docs/guides/application-migration.md)
 - [Task chains](docs/guides/task-chains.md)
 
 ### Reference

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Packaged `cron-worker-integration` Codex skill for guided discovery,
+  configuration-source selection and safe application migration without
+  reading library internals.
+
 ## [0.1.0-rc] - 2026-10-09
 
 ### Added

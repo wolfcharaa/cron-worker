@@ -2,6 +2,8 @@
 
 Use the global `development` skill for code changes, tests, commits and
 debugging. Use `library-documentation` when changing the public documentation.
+Use the repository-local `cron-worker-integration` skill when integrating this
+package into an application or migrating existing cron configuration.
 
 ## Invariants
 

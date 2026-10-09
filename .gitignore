@@ -7,3 +7,9 @@
 /docker/data/
 /release-*.bundle
 /release-*-offline.tar
+
+# Ship the cron-worker integration skill even when .agents is ignored globally.
+!/.agents/
+!/.agents/skills/
+!/.agents/skills/cron-worker-integration/
+!/.agents/skills/cron-worker-integration/**
