@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-rc] - 2026-10-09
+
 ### Added
 
 - Static and container-callback chain task configs with preflight callable and
@@ -42,6 +44,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Exec tasks accept either a Unix username or a numeric effective UID, including
+  container users that are absent from `/etc/passwd`.
+- Release sources no longer include unrelated application templates or
+  framework-specific Codex skills.
 - Library documentation is split into task-oriented guides, contracts and
   copyable examples, with README kept as the navigation and quick-start page.
 - PSR Container compatibility now includes both `^1.1` and `^2.0`.
