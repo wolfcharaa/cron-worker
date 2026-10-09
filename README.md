@@ -69,6 +69,30 @@ $scheduler->task('sync', $handler)->every($interval);
 например, `everyMinutes(15)` преобразуется в `*/15 * * * *`, а
 `everyHours(4)` — в `0 */4 * * *`.
 
+## Профили запуска
+
+Профиль — это именованный план задач для конкретного runtime, как отдельный
+раздел `profiles.<name>` в cron-каталоге. Имя не ограничено окружениями:
+подойдут `dev`, `stage`, `prod`, `default` или `server-10.11.166.100`.
+
+Активный план выбирается один раз:
+
+```php
+$scheduler = new Scheduler(
+    new SchedulerOptions(profile: 'server-10.11.166.100'),
+);
+
+$scheduler->task('shared', $handler); // any — входит во все планы
+$scheduler
+    ->task('ftp-upload', $handler)
+    ->profiles('default', 'server-10.11.166.100');
+```
+
+Можно передать и собственный string-backed enum. `any` является wildcard и не
+смешивается с именованными профилями одной задачи. Профиль применяется только к
+корневой scheduled-задаче: после её запуска вся цепочка `then*()` исполняется
+без повторной фильтрации и ожидания нового schedule.
+
 ## Низкоуровневый cron API
 
 `CronExpression` можно создать из готовой строки или собрать по отдельным

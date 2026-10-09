@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Wolfcharaa\Cron\Task;
 
 use Psr\Container\ContainerInterface;
+use Wolfcharaa\Cron\Configuration\Profile;
 use Wolfcharaa\Cron\Container\ContainerFactory;
 use Wolfcharaa\Cron\Exception\MissingContainerFactory;
 use Wolfcharaa\Cron\Schedule\CronExpression;
@@ -25,6 +26,9 @@ final class ScheduledTaskBuilder
 
     private ?OneShotTaskBuilder $next = null;
 
+    /** @var list<Profile> */
+    private array $profiles;
+
     /** @param (callable(): mixed)|TaskHandler $handler */
     public function __construct(
         public readonly string $name,
@@ -38,6 +42,7 @@ final class ScheduledTaskBuilder
 
         $this->handler = $handler instanceof TaskHandler ? $handler : \Closure::fromCallable($handler);
         $this->schedule = $schedule ?? ScheduleBuilder::create();
+        $this->profiles = [new Profile(Profile::ANY)];
     }
 
     public function cron(CronExpression|string $expression): self
@@ -173,6 +178,18 @@ final class ScheduledTaskBuilder
         return $this;
     }
 
+    public function profile(Profile|string|\BackedEnum $profile): self
+    {
+        return $this->profiles($profile);
+    }
+
+    public function profiles(Profile|string|\BackedEnum ...$profiles): self
+    {
+        $this->profiles = Profile::normalizeList(array_values($profiles));
+
+        return $this;
+    }
+
     /** @param (callable(): mixed)|TaskHandler $handler */
     public function then(string $name, callable|TaskHandler $handler): OneShotTaskBuilder
     {
@@ -210,6 +227,7 @@ final class ScheduledTaskBuilder
             handler: $this->handler,
             overlapPolicy: $this->overlapPolicy,
             next: $this->next?->build(),
+            profiles: $this->profiles,
         );
     }
 

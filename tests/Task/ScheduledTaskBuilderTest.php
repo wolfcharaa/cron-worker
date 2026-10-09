@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Wolfcharaa\Cron\Tests\Task;
 
 use Testo\Assert;
+use Testo\Expect;
 use Testo\Test;
+use Wolfcharaa\Cron\Configuration\Profile;
 use Wolfcharaa\Cron\Schedule\CronSchedule;
 use Wolfcharaa\Cron\Task\OverlapPolicy;
 use Wolfcharaa\Cron\Task\ScheduledTaskBuilder;
@@ -41,5 +43,27 @@ final class ScheduledTaskBuilderTest
         Assert::same($task->next?->name, 'second');
         Assert::same($task->next->next?->name, 'third');
         Assert::same($task->next->next->next, null);
+    }
+
+    public function assignsNamedProfilesToScheduledRoot(): void
+    {
+        $task = (new ScheduledTaskBuilder('upload', static function (): void {}))
+            ->profiles('default', 'server-10.11.166.100')
+            ->build();
+
+        Assert::same(
+            array_map(static fn(Profile $profile): string => $profile->name, $task->profiles),
+            ['default', 'server-10.11.166.100'],
+        );
+        Assert::true($task->runsIn(new Profile('server-10.11.166.100')));
+        Assert::false($task->runsIn(new Profile('dev')));
+    }
+
+    public function rejectsAnyCombinedWithNamedProfile(): void
+    {
+        $builder = new ScheduledTaskBuilder('invalid', static function (): void {});
+
+        Expect::exception(\InvalidArgumentException::class);
+        $builder->profiles(Profile::ANY, 'prod');
     }
 }

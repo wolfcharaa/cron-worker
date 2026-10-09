@@ -9,6 +9,7 @@ use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Wolfcharaa\Cron\Clock\SystemClock;
+use Wolfcharaa\Cron\Configuration\Profile;
 use Wolfcharaa\Cron\Container\CallableContainerFactory;
 use Wolfcharaa\Cron\Container\ContainerFactory;
 use Wolfcharaa\Cron\Exception\DuplicateTask;
@@ -36,6 +37,8 @@ final class Scheduler implements SchedulerInterface
 
     private readonly ?ContainerFactory $containerFactory;
 
+    private readonly Profile $profile;
+
     /** @param ContainerFactory|(callable(): ContainerInterface)|null $containerFactory */
     public function __construct(
         ?SchedulerOptions $options = null,
@@ -45,6 +48,7 @@ final class Scheduler implements SchedulerInterface
         null|ContainerFactory|callable $containerFactory = null,
     ) {
         $options ??= new SchedulerOptions();
+        $this->profile = $options->profile;
         $this->containerFactory = match (true) {
             $containerFactory instanceof ContainerFactory => $containerFactory,
             $containerFactory !== null => new CallableContainerFactory($containerFactory),
@@ -133,7 +137,18 @@ final class Scheduler implements SchedulerInterface
         $tasks = [];
 
         foreach ($this->tasks as $name => $task) {
-            $tasks[$name] = $task instanceof ScheduledTaskBuilder ? $task->build() : $task;
+            $task = $task instanceof ScheduledTaskBuilder ? $task->build() : $task;
+
+            if ($task->runsIn($this->profile)) {
+                $tasks[$name] = $task;
+            }
+        }
+
+        if ($tasks === []) {
+            throw new \LogicException(\sprintf(
+                'No scheduled tasks are enabled for profile "%s".',
+                $this->profile->name,
+            ));
         }
 
         return $tasks;
