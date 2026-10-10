@@ -174,9 +174,14 @@ final readonly class CallableTaskValidator
             return $parameters[$position];
         }
 
-        $last = $parameters[array_key_last($parameters)] ?? null;
+        $lastKey = array_key_last($parameters);
+        if ($lastKey === null) {
+            return null;
+        }
 
-        return $last?->isVariadic() === true ? $last : null;
+        $last = $parameters[$lastKey];
+
+        return $last->isVariadic() ? $last : null;
     }
 
     private function rejectReference(string $callable, \ReflectionParameter $parameter): void

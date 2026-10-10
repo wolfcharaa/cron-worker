@@ -64,4 +64,11 @@ final class SchedulerTest
         Expect::exception(\LogicException::class);
         $scheduler->tasks();
     }
+
+    public function configuresOneTimezoneForTheSchedulerRuntime(): void
+    {
+        $options = new SchedulerOptions(timezone: 'Europe/Moscow');
+
+        Assert::same($options->timezone->getName(), 'Europe/Moscow');
+    }
 }

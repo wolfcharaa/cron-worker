@@ -13,7 +13,7 @@ use Wolfcharaa\Cron\Task\TaskExecutionContext;
 
 #[CronTask(
     schedule: '*/5 * * * *',
-    profile: 'test',
+    profiles: 'test',
     name: 'configured-chain',
     chain: new ChainConfig(
         new StaticTaskConfig(

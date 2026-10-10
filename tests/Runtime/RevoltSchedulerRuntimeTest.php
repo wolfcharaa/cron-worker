@@ -101,6 +101,39 @@ final class RevoltSchedulerRuntimeTest
         }
     }
 
+    public function evaluatesEveryScheduleInTheRuntimeTimezone(): void
+    {
+        $schedule = new class implements Schedule {
+            /** @var list<string> */
+            public array $timezones = [];
+
+            public function nextRunAfter(\DateTimeImmutable $after): \DateTimeImmutable
+            {
+                $this->timezones[] = $after->getTimezone()->getName();
+
+                return $after->modify('+1 day');
+            }
+        };
+        EventLoop::delay(0.01, static function (): void {
+            posix_kill(posix_getpid(), SIGTERM);
+        });
+
+        (new RevoltSchedulerRuntime(
+            supervisor: new PcntlProcessSupervisor(),
+            clock: new SystemClock(),
+            logger: new NullLogger(),
+            options: new SchedulerOptions(
+                clockResyncIntervalSeconds: 0.01,
+                shutdownGracePeriodSeconds: 0.1,
+                timezone: 'Europe/Moscow',
+            ),
+        ))->run([
+            new ScheduledTask('timezone-probe', $schedule, static fn(): int => 0),
+        ]);
+
+        Assert::same(array_values(array_unique($schedule->timezones)), ['Europe/Moscow']);
+    }
+
     private function onceImmediately(): Schedule
     {
         return new class implements Schedule {

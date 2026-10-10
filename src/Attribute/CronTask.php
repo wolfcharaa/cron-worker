@@ -12,26 +12,25 @@ use Wolfcharaa\Cron\Schedule\CronExpression;
 use Wolfcharaa\Cron\Task\OverlapPolicy;
 
 #[\Attribute(\Attribute::TARGET_CLASS | \Attribute::IS_REPEATABLE)]
-final readonly class CronTask
+final readonly class CronTask implements CronTaskAttribute
 {
     public CronExpression $expression;
 
-    public Profile $profile;
-
-    public \DateTimeZone $timezone;
+    /** @var list<Profile> */
+    public array $profiles;
 
     public ChainConfig $chain;
 
     /**
+     * @param Profile|string|\BackedEnum|list<Profile|string|\BackedEnum> $profiles
      * @param array<int|string, mixed> $arguments
      */
     public function __construct(
         string $schedule,
-        Profile|string|\BackedEnum $profile = Profile::DEFAULT,
+        Profile|string|\BackedEnum|array $profiles = [Profile::DEFAULT],
         public ?string $name = null,
         public ?string $method = null,
         public array $arguments = [],
-        string $timezone = 'UTC',
         public OverlapPolicy $overlapPolicy = OverlapPolicy::Forbid,
         ?ChainConfig $chain = null,
     ) {
@@ -44,8 +43,7 @@ final readonly class CronTask
         }
 
         $this->expression = new CronExpression($schedule);
-        $this->profile = Profile::normalize($profile);
-        $this->timezone = new \DateTimeZone($timezone);
+        $this->profiles = Profile::normalizeMany($profiles);
         $this->chain = $chain ?? new ChainConfig();
     }
 
@@ -61,8 +59,7 @@ final readonly class CronTask
                 overlapPolicy: $this->overlapPolicy,
             ),
             expression: $this->expression,
-            profile: $this->profile,
-            timezone: $this->timezone,
+            profiles: $this->profiles,
             chain: $this->chain,
         );
     }

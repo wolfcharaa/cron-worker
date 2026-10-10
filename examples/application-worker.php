@@ -19,6 +19,10 @@ $configuredProfile = getenv('APP_CRON_PROFILE');
 $activeProfile = is_string($configuredProfile) && $configuredProfile !== ''
     ? $configuredProfile
     : 'default';
+$configuredTimezone = getenv('APP_TIMEZONE');
+$timezone = is_string($configuredTimezone) && $configuredTimezone !== ''
+    ? $configuredTimezone
+    : 'UTC';
 
 $containerBootstrap = $projectRoot . '/config/container.php';
 $containerFactory = is_file($containerBootstrap)
@@ -64,6 +68,7 @@ $scheduler = new Scheduler(
     options: new SchedulerOptions(
         profile: $activeProfile,
         maxConcurrency: 4,
+        timezone: $timezone,
     ),
     containerFactory: $containerFactory,
 );

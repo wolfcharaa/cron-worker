@@ -26,11 +26,10 @@ final class CronProfileConfig
 
     public function add(CronTaskDefinition $task): self
     {
-        if ($task->profile->name !== $this->profile->name) {
+        if (!$task->isDeclaredFor($this->profile)) {
             throw new \InvalidArgumentException(\sprintf(
-                'Task "%s" belongs to profile "%s", not "%s".',
+                'Task "%s" is not declared for profile "%s".',
                 $task->name,
-                $task->profile->name,
                 $this->profile->name,
             ));
         }
@@ -48,5 +47,10 @@ final class CronProfileConfig
     public function tasks(): array
     {
         return $this->tasks;
+    }
+
+    public function has(string $taskName): bool
+    {
+        return isset($this->tasks[$taskName]);
     }
 }

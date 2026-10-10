@@ -10,13 +10,17 @@ final readonly class SchedulerOptions
 {
     public Profile $profile;
 
+    public \DateTimeZone $timezone;
+
     public function __construct(
         public int $maxConcurrency = 4,
         public float $clockResyncIntervalSeconds = 30.0,
         public float $shutdownGracePeriodSeconds = 10.0,
         Profile|string|\BackedEnum $profile = Profile::DEFAULT,
+        \DateTimeZone|string $timezone = 'UTC',
     ) {
         $this->profile = Profile::normalize($profile);
+        $this->timezone = \is_string($timezone) ? new \DateTimeZone($timezone) : $timezone;
 
         if ($this->maxConcurrency < 1) {
             throw new \InvalidArgumentException('maxConcurrency must be at least 1.');

@@ -29,7 +29,6 @@ final class CrontabToYamlCommand extends Command
             ->addArgument('source', InputArgument::OPTIONAL, 'Crontab file or "-" for STDIN.', '-')
             ->addOption('output', 'o', InputOption::VALUE_REQUIRED, 'YAML file or "-" for STDOUT.', '-')
             ->addOption('profile', 'p', InputOption::VALUE_REQUIRED, 'Target YAML profile.', 'default')
-            ->addOption('timezone', null, InputOption::VALUE_REQUIRED, 'Fallback schedule timezone.', 'UTC')
             ->addOption('system', null, InputOption::VALUE_NONE, 'Parse /etc/crontab user columns.')
             ->addOption('schema', null, InputOption::VALUE_REQUIRED, 'Optional JSON Schema path written to $schema.');
     }
@@ -50,7 +49,6 @@ final class CrontabToYamlCommand extends Command
             contents: $contents,
             profile: $this->stringInput($input->getOption('profile'), 'profile'),
             systemFormat: (bool) $input->getOption('system'),
-            timezone: $this->stringInput($input->getOption('timezone'), 'timezone'),
             schema: $this->nullableStringInput($input->getOption('schema'), 'schema'),
         );
 

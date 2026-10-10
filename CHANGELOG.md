@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-rc.2] - 2026-10-10
+
+### Added
+
+- Native Symfony Console task attributes that resolve commands, helper sets and
+  output from a fresh child-process PSR-11 container and execute commands through
+  `Command::run()` without application callback wrappers.
+- Multi-profile task definitions and attributes for sharing identical task
+  settings without duplicating configuration.
+- A tracked Docker Compose override for resolving Packagist during local
+  dependency and PHP-version matrix runs.
+
+### Changed
+
+- Cron timezone is configured once through `SchedulerOptions`; per-task,
+  attribute, YAML and `CRON_TZ` schedule timezones are no longer accepted.
+
 ## [0.1.0-rc.1] - 2026-10-10
 
 ### Added

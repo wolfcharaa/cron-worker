@@ -61,7 +61,7 @@ final class RevoltSchedulerRuntime
         }
 
         $this->registerSignals();
-        $now = $this->clock->now();
+        $now = $this->now();
 
         foreach ($this->tasks as $name => $task) {
             $this->nextRuns[$name] = $task->schedule->nextRunAfter($now);
@@ -99,7 +99,7 @@ final class RevoltSchedulerRuntime
             return;
         }
 
-        $now = $this->clock->now();
+        $now = $this->now();
 
         foreach ($this->nextRuns as $name => $plannedAt) {
             if ($plannedAt > $now) {
@@ -157,7 +157,7 @@ final class RevoltSchedulerRuntime
         }
 
         $nextRun = min($this->nextRuns);
-        $now = $this->clock->now();
+        $now = $this->now();
         $secondsUntilNextRun = (float) $nextRun->format('U.u') - (float) $now->format('U.u');
         $delay = max(0.0, min($secondsUntilNextRun, $this->options->clockResyncIntervalSeconds));
 
@@ -174,7 +174,7 @@ final class RevoltSchedulerRuntime
             if ($completed->succeeded() && !$this->stopping && $next !== null) {
                 $this->pendingTasks[] = [
                     'task' => $next,
-                    'queuedAt' => $this->clock->now(),
+                    'queuedAt' => $this->now(),
                 ];
 
                 $this->logger->info('Follow-up task queued.', [
@@ -262,7 +262,7 @@ final class RevoltSchedulerRuntime
                 continue;
             }
 
-            $this->launchTask($task, $pending['queuedAt'], $this->clock->now(), 'follow-up');
+            $this->launchTask($task, $pending['queuedAt'], $this->now(), 'follow-up');
         }
 
         $this->pendingTasks = $remaining;
@@ -354,5 +354,10 @@ final class RevoltSchedulerRuntime
         }
 
         return $indexed;
+    }
+
+    private function now(): \DateTimeImmutable
+    {
+        return $this->clock->now()->setTimezone($this->options->timezone);
     }
 }

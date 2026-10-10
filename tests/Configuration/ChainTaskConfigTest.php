@@ -64,7 +64,7 @@ final class ChainTaskConfigTest
             new CronTaskDefinition(
                 task: new ExecTaskConfig('root', 'true'),
                 expression: '* * * * *',
-                profile: 'prod',
+                profiles: 'prod',
                 chain: new ChainConfig(
                     new StaticTaskConfig(
                         StaticChainAction::class,

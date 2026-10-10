@@ -158,13 +158,6 @@ final class ScheduledTaskBuilder
         return $this;
     }
 
-    public function timezone(\DateTimeZone|string $timezone): self
-    {
-        $this->schedule->timezone($timezone);
-
-        return $this;
-    }
-
     public function allowOverlapping(): self
     {
         $this->overlapPolicy = OverlapPolicy::Allow;

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Wolfcharaa\Cron\Discovery;
 
-use Wolfcharaa\Cron\Attribute\CronTask;
+use Wolfcharaa\Cron\Attribute\CronTaskAttribute;
 use Wolfcharaa\Cron\Registry\CronProfileMap;
 
 final readonly class AttributeCronTaskDiscovery
@@ -21,7 +21,10 @@ final readonly class AttributeCronTaskDiscovery
 
             $seen[$class] = true;
             $reflection = new \ReflectionClass($class);
-            $attributes = $reflection->getAttributes(CronTask::class);
+            $attributes = $reflection->getAttributes(
+                CronTaskAttribute::class,
+                \ReflectionAttribute::IS_INSTANCEOF,
+            );
 
             if ($attributes !== [] && !$reflection->isInstantiable()) {
                 throw new \LogicException(\sprintf(

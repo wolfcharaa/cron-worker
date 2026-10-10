@@ -15,7 +15,6 @@ final readonly class CrontabYamlConverter
         string $contents,
         Profile|string|\BackedEnum $profile = Profile::DEFAULT,
         bool $systemFormat = false,
-        \DateTimeZone|string $timezone = 'UTC',
         ?string $schema = null,
     ): string {
         $profile = Profile::normalize($profile);
@@ -23,7 +22,6 @@ final readonly class CrontabYamlConverter
             contents: $contents,
             profile: $profile,
             systemFormat: $systemFormat,
-            timezone: $timezone,
         ))->load()->forProfile($profile);
         $jobs = [];
 
@@ -41,7 +39,6 @@ final readonly class CrontabYamlConverter
                 'name' => \sprintf('job-%d', $index + 1),
                 'schedule' => $definition->expression->toString(),
                 'command' => $task->command,
-                'timezone' => $definition->timezone->getName(),
                 'shell' => $task->shell,
                 'overlap_policy' => $task->overlapPolicy->value,
             ];

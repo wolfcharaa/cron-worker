@@ -6,11 +6,12 @@
 ## Что настраивается
 
 - `APP_CRON_PROFILE` выбирает активный план;
+- `APP_TIMEZONE` задаёт общую timezone всех cron-выражений runtime;
 - `Psr4DirectoryClassProvider` получает namespace и каталог команд;
 - `config/container.php` возвращает свежий PSR-11 container;
 - YAML и classic crontab подключаются только если файлы существуют;
 - manual tasks регистрируются перед `load()`;
-- `SchedulerOptions` задаёт concurrency и shutdown limits.
+- `SchedulerOptions` задаёт timezone, concurrency и shutdown limits.
 
 ## Порядок bootstrap
 
@@ -44,7 +45,10 @@ if (is_file($yamlConfig)) {
 }
 
 $scheduler = new Scheduler(
-    options: new SchedulerOptions(profile: $activeProfile),
+    options: new SchedulerOptions(
+        profile: $activeProfile,
+        timezone: $timezone,
+    ),
     containerFactory: $containerFactory,
 );
 

@@ -19,15 +19,15 @@ final readonly class CronConfigValidator
     ): CronConfigValidationResult {
         $issues = [];
 
-        foreach ($this->definitions($map, $profile) as $definition) {
+        foreach ($this->definitions($map, $profile) as [$definition, $profileName]) {
             $root = \sprintf(
                 'profiles.%s.tasks.%s',
-                $definition->profile->name,
+                $profileName,
                 $definition->name,
             );
             $this->validateTask(
                 $definition->task,
-                $definition->profile->name,
+                $profileName,
                 $root,
                 $containerFactory,
                 $issues,
@@ -36,7 +36,7 @@ final readonly class CronConfigValidator
             foreach ($definition->chain->tasks() as $position => $task) {
                 $this->validateTask(
                     $task,
-                    $definition->profile->name,
+                    $profileName,
                     \sprintf('%s.then.%d.%s', $root, $position, $task->name()),
                     $containerFactory,
                     $issues,
@@ -55,19 +55,26 @@ final readonly class CronConfigValidator
         $this->validate($map, $containerFactory, $profile)->assertValid();
     }
 
-    /** @return list<CronTaskDefinition> */
+    /** @return list<array{CronTaskDefinition, string}> */
     private function definitions(
         CronProfileMap $map,
         null|Profile|string|\BackedEnum $profile,
     ): array {
         if ($profile !== null) {
-            return $map->forProfile($profile);
+            $profile = Profile::normalize($profile);
+
+            return array_map(
+                static fn(CronTaskDefinition $definition): array => [$definition, $profile->name],
+                $map->forProfile($profile),
+            );
         }
 
         $definitions = [];
 
-        foreach ($map->profileConfigs() as $profileConfig) {
-            array_push($definitions, ...array_values($profileConfig->tasks()));
+        foreach ($map->profileConfigs() as $profileName => $profileConfig) {
+            foreach ($profileConfig->tasks() as $definition) {
+                $definitions[] = [$definition, $profileName];
+            }
         }
 
         return $definitions;

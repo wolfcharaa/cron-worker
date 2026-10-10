@@ -13,12 +13,14 @@ $scheduler = new Scheduler(
     new SchedulerOptions(
         profile: 'default',
         maxConcurrency: 4,
+        timezone: 'Europe/Moscow',
     ),
 );
 ```
 
-`profile` выбирает один план задач. `maxConcurrency` ограничивает суммарное
-число работающих child-процессов.
+`profile` выбирает один план задач. `timezone` задаёт часовую зону для всех
+cron-выражений этого runtime. `maxConcurrency` ограничивает суммарное число
+работающих child-процессов.
 
 ## 2. Зарегистрируйте задачу
 
@@ -30,7 +32,6 @@ $scheduler
         return 0;
     })
     ->dailyAt(3, 15)
-    ->timezone('Europe/Moscow')
     ->withoutOverlapping();
 ```
 

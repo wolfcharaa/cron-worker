@@ -9,7 +9,7 @@ use Wolfcharaa\Cron\Configuration\Profile;
 
 #[CronTask(
     schedule: '* * * * *',
-    profile: Profile::ANY,
+    profiles: Profile::ANY,
     name: 'recover-stale',
 )]
 final class RecoverStaleCommand

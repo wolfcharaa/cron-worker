@@ -1,0 +1,5 @@
+services:
+  php:
+    extra_hosts:
+      - "repo.packagist.org=185.59.220.199"
+      - "repo.packagist.org=185.93.2.245"

@@ -41,7 +41,7 @@ PSR-11 container bootstrap и необходимые runtime profiles. Дост�
 
 ## Что получится
 
-Skill формирует инвентарь с расписанием, timezone, environment, cwd, shell,
+Skill формирует инвентарь с расписанием, runtime timezone, environment, cwd, shell,
 user/UID, output, overlap и success-chain связями, после чего:
 
 1. создаёт application-owned `bin/cron.php`;

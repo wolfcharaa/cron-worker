@@ -46,7 +46,6 @@ interface SchedulerInterface
         string $name,
         CronExpression|string $expression,
         callable|TaskHandler $handler,
-        \DateTimeZone|string $timezone = 'UTC',
         OverlapPolicy $overlapPolicy = OverlapPolicy::Forbid,
     ): self;
 

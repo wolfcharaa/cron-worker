@@ -5,7 +5,8 @@ published API so integration does not require reading `vendor/.../src`.
 
 ## Existing classic crontab
 
-Keep the file unchanged and load it:
+Keep the file unchanged unless it contains `CRON_TZ`; move that value to the
+worker-wide `SchedulerOptions::timezone` before loading it:
 
 ```php
 $loader = CrontabConfigLoader::fromFile(
@@ -31,7 +32,6 @@ if ($contents === false) {
 $yaml = (new CrontabYamlConverter())->convert(
     contents: $contents,
     profile: 'prod',
-    timezone: 'UTC',
     schema: '../vendor/romanfedorskij/cron/resources/schema/crontab.schema.json',
 );
 
@@ -56,7 +56,6 @@ $schema: ../vendor/romanfedorskij/cron/resources/schema/crontab.schema.json
 version: 1
 profiles:
   prod:
-    timezone: UTC
     jobs:
       - name: import
         schedule: "*/15 * * * *"
@@ -81,10 +80,15 @@ same task names, commands and schedules are observed.
 
 ## Existing command or service classes
 
-Attach one repeatable attribute per profile:
+Use one attribute for profiles with identical settings. Add repeatable
+attributes only when schedule, arguments or chain differ:
 
 ```php
-#[CronTask(schedule: '*/15 * * * *', profile: 'prod', method: 'run')]
+#[CronTask(
+    schedule: '*/15 * * * *',
+    profiles: ['stage', 'prod'],
+    method: 'run',
+)]
 final class ImportCommand
 {
     public function run(): int
@@ -130,6 +134,7 @@ $scheduler = new Scheduler(
     options: new SchedulerOptions(
         profile: $activeProfile,
         maxConcurrency: 4,
+        timezone: $timezone,
     ),
     containerFactory: $containerFactory,
 );

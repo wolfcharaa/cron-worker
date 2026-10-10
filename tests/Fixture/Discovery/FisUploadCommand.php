@@ -11,11 +11,10 @@ use Wolfcharaa\Cron\Task\OverlapPolicy;
 
 #[CronTask(
     schedule: '*/10 * * * *',
-    profile: 'default',
+    profiles: ['default', 'server-10.11.166.100'],
     name: 'fis-upload',
     method: 'run',
     arguments: ['prepared'],
-    timezone: 'Europe/Moscow',
     overlapPolicy: OverlapPolicy::Allow,
     chain: new ChainConfig(
         new ServiceTaskConfig(
@@ -30,17 +29,8 @@ use Wolfcharaa\Cron\Task\OverlapPolicy;
     ),
 )]
 #[CronTask(
-    schedule: '*/10 * * * *',
-    profile: 'server-10.11.166.100',
-    name: 'fis-upload',
-    method: 'run',
-    arguments: ['prepared'],
-    timezone: 'Europe/Moscow',
-    overlapPolicy: OverlapPolicy::Allow,
-)]
-#[CronTask(
     schedule: '0 * * * *',
-    profile: 'server-10.11.159.86',
+    profiles: 'server-10.11.159.86',
     name: 'fis-upload',
     method: 'run',
 )]

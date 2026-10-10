@@ -14,7 +14,7 @@ use Wolfcharaa\Cron\Task\TaskExecutionContext;
 
 #[CronTask(
     schedule: '*/15 * * * *',
-    profile: 'prod',
+    profiles: ['stage', 'prod'],
     name: 'import',
     method: 'run',
     chain: new ChainConfig(

@@ -46,6 +46,15 @@ final class CronProfileMapTest
         Assert::same($this->expressions($map->forProfile('prod')), ['0 * * * *']);
     }
 
+    public function registersOneDefinitionInSeveralProfiles(): void
+    {
+        $definition = $this->task('shared-config', ['stage', 'prod']);
+        $map = new CronProfileMap([$definition]);
+
+        Assert::same($map->forProfile('stage'), [$definition]);
+        Assert::same($map->forProfile('prod'), [$definition]);
+    }
+
     public function rejectsDuplicateTaskInsideOneProfile(): void
     {
         $map = new CronProfileMap([
@@ -54,6 +63,21 @@ final class CronProfileMapTest
 
         Expect::exception(DuplicateProfileTask::class);
         $map->add($this->task('duplicate', 'prod'));
+    }
+
+    public function rejectsMultiProfileDefinitionAtomically(): void
+    {
+        $map = new CronProfileMap([
+            $this->task('duplicate', 'prod'),
+        ]);
+
+        try {
+            $map->add($this->task('duplicate', ['stage', 'prod']));
+
+            throw new \LogicException('Expected duplicate profile task exception.');
+        } catch (DuplicateProfileTask) {
+            Assert::same($map->forProfile('stage'), []);
+        }
     }
 
     public function rejectsNamedOverrideOfAnyTask(): void
@@ -66,15 +90,16 @@ final class CronProfileMapTest
         $map->add($this->task('duplicate', 'prod'));
     }
 
+    /** @param string|list<string> $profiles */
     private function task(
         string $name,
-        string $profile,
+        string|array $profiles,
         string $expression = '* * * * *',
     ): CronTaskDefinition {
         return new CronTaskDefinition(
             task: new ServiceTaskConfig($name),
             expression: $expression,
-            profile: $profile,
+            profiles: $profiles,
         );
     }
 

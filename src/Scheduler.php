@@ -131,12 +131,11 @@ final class Scheduler implements SchedulerInterface
         string $name,
         CronExpression|string $expression,
         callable|TaskHandler $handler,
-        \DateTimeZone|string $timezone = 'UTC',
         OverlapPolicy $overlapPolicy = OverlapPolicy::Forbid,
     ): self {
         return $this->add(new ScheduledTask(
             name: $name,
-            schedule: new CronSchedule($expression, $timezone),
+            schedule: new CronSchedule($expression),
             handler: $handler,
             overlapPolicy: $overlapPolicy,
         ));
@@ -165,8 +164,7 @@ final class Scheduler implements SchedulerInterface
             $builder = $this
                 ->task($task->name, $task->task->createHandler($this->containerFactory))
                 ->cron($task->expression)
-                ->timezone($task->timezone)
-                ->profile($task->profile);
+                ->profiles(...$task->profiles);
 
             if ($task->task->overlapPolicy() === OverlapPolicy::Allow) {
                 $builder->allowOverlapping();

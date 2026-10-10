@@ -21,11 +21,13 @@ final class CronScheduleTest
         Assert::same($nextRun->format('Y-m-d H:i:s P'), '2026-10-09 12:35:00 +00:00');
     }
 
-    public function appliesScheduleTimezone(): void
+    public function usesTimezoneFromRuntimeDate(): void
     {
-        $schedule = new CronSchedule('0 0 * * *', new \DateTimeZone('Europe/Moscow'));
+        $schedule = new CronSchedule('0 0 * * *');
+        $after = new \DateTimeImmutable('2026-10-09 20:59:00 UTC');
+        $after = $after->setTimezone(new \DateTimeZone('Europe/Moscow'));
 
-        $nextRun = $schedule->nextRunAfter(new \DateTimeImmutable('2026-10-09 20:59:00 UTC'));
+        $nextRun = $schedule->nextRunAfter($after);
 
         Assert::same($nextRun->format('Y-m-d H:i:s P'), '2026-10-10 00:00:00 +03:00');
     }

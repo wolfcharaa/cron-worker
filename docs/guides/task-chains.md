@@ -98,7 +98,7 @@ use Wolfcharaa\Cron\Configuration\StaticTaskConfig;
 
 #[CronTask(
     schedule: '*/15 * * * *',
-    profile: 'prod',
+    profiles: ['stage', 'prod'],
     method: 'run',
     chain: new ChainConfig(
         new ServiceTaskConfig(

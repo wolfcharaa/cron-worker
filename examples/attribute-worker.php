@@ -15,7 +15,7 @@ require dirname(__DIR__) . '/vendor/autoload.php';
 
 #[CronTask(
     schedule: '*/10 * * * *',
-    profile: 'default',
+    profiles: 'default',
     name: 'import',
     method: 'run',
     chain: new ChainConfig(
@@ -25,7 +25,7 @@ require dirname(__DIR__) . '/vendor/autoload.php';
 )]
 #[CronTask(
     schedule: '*/5 * * * *',
-    profile: 'stage',
+    profiles: 'stage',
     name: 'import',
     method: 'run',
 )]

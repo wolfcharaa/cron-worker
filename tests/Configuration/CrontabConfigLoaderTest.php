@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Wolfcharaa\Cron\Tests\Configuration;
 
 use Testo\Assert;
+use Testo\Expect;
 use Testo\Test;
 use Wolfcharaa\Cron\Configuration\ExecTaskConfig;
 use Wolfcharaa\Cron\Configuration\Loader\CrontabConfigLoader;
@@ -21,7 +22,6 @@ final class CrontabConfigLoaderTest
             'SHELL=/bin/bash',
             'PATH=/usr/local/bin:/usr/bin',
             'HOME=/var/www/app',
-            'CRON_TZ=Europe/Moscow',
             '# An ordinary crontab comment.',
             '*/15 * * * * php bin/console app:cleanup',
             '@daily php bin/console app:archive',
@@ -34,7 +34,6 @@ final class CrontabConfigLoaderTest
 
         Assert::true(str_starts_with($first->name, 'exec-'));
         Assert::same($first->expression->toString(), '*/15 * * * *');
-        Assert::same($first->timezone->getName(), 'Europe/Moscow');
         Assert::instanceOf($first->task, ExecTaskConfig::class);
         Assert::same($first->task->workingDirectory, '/var/www/app');
         Assert::same($first->task->overlapPolicy, OverlapPolicy::Allow);
@@ -78,5 +77,14 @@ final class CrontabConfigLoaderTest
 
         Assert::same(\count($tasks), 2);
         Assert::false($first->name === $second->name);
+    }
+
+    public function rejectsPerTaskCronTimezone(): void
+    {
+        Expect::exception(\InvalidArgumentException::class);
+
+        (new CrontabConfigLoader(
+            "CRON_TZ=Europe/Moscow\n* * * * * php bin/heartbeat.php",
+        ))->load();
     }
 }

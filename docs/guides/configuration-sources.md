@@ -23,14 +23,19 @@ Manual-задачи можно добавить до или после `load()`,
 
 ## Attributes
 
-`CronTask` repeatable: одна команда может иметь полностью независимые
-расписания в разных профилях.
+Один `CronTask` может включать одинаковую конфигурацию сразу в несколько
+профилей. Если расписание или arguments отличаются, добавьте второй repeatable
+attribute.
 
 ```php
 use Wolfcharaa\Cron\Attribute\CronTask;
 
-#[CronTask(schedule: '*/10 * * * *', profile: 'stage', method: 'run')]
-#[CronTask(schedule: '0 * * * *', profile: 'prod', method: 'run')]
+#[CronTask(
+    schedule: '*/10 * * * *',
+    profiles: ['stage', 'prod'],
+    method: 'run',
+)]
+#[CronTask(schedule: '0 * * * *', profiles: 'nightly', method: 'run')]
 final class ImportCommand
 {
     public function run(): int
@@ -57,6 +62,30 @@ $loader = new AttributeCronConfigLoader(
 `ComposerClassMapProvider`, `ChainClassProvider` и `RegexFilterClassProvider`.
 Никакого скрытого project scan библиотека не выполняет.
 
+Для Symfony Console command используйте `SymfonyTask`: библиотека сама
+соберёт `ArrayInput`, получит command, `HelperSet` и `OutputInterface` из
+child-local container и вызовет стандартный `Command::run()`.
+
+```php
+use Symfony\Component\Console\Command\Command;
+use Wolfcharaa\Cron\Attribute\SymfonyTask;
+
+#[SymfonyTask(
+    schedule: '*/5 * * * *',
+    profiles: ['stage', 'prod'],
+    name: 'refresh-search-index',
+    arguments: ['people'],
+)]
+final class RefreshSearchIndexCommand extends Command
+{
+    // configure() and execute()
+}
+```
+
+Приложение может связать `OutputInterface` со своим файловым output и
+зарегистрировать `HelperSet` для framework-specific helpers. Отдельный static
+callback рядом с command не нужен.
+
 ## YAML
 
 ```php
@@ -72,7 +101,6 @@ $schema: ../vendor/romanfedorskij/cron/resources/schema/crontab.schema.json
 version: 1
 profiles:
   stage:
-    timezone: Europe/Moscow
     shell: /bin/bash
     environment:
       APP_ENV: stage
@@ -84,7 +112,6 @@ profiles:
           - name: notify
             command: php bin/console app:notify
   prod:
-    timezone: UTC
     jobs:
       - name: import
         schedule: "0 * * * *"
@@ -94,6 +121,9 @@ profiles:
 Схема находится в `resources/schema/crontab.schema.json`. YAML-loader проверяет
 обязательные поля, типы и неизвестные ключи. Формат также понимает совместимые
 поля `defaults`, `cwd`, `path`, `user` и `log` из cron-каталога mvdcake.
+
+Timezone не является частью YAML job/profile: задайте её один раз через
+`SchedulerOptions(timezone: 'Europe/Moscow')` в worker bootstrap.
 
 YAML `then` описывает exec-шаги. PHP service/static/container шаги задаются
 manual API или `ChainConfig` внутри attributes.
@@ -116,6 +146,7 @@ calendar macros вроде `@daily`. Для `/etc/crontab` с колонкой �
 Ограничения совместимости с daemon cron:
 
 - `@reboot`, cron-mail и специальная обработка `%` не эмулируются;
+- `CRON_TZ` отклоняется: перенесите его значение в `SchedulerOptions::timezone`;
 - scheduler не меняет Unix user, а проверяет уже активное имя пользователя
   или числовой effective UID;
 - задачи crontab по умолчанию разрешают overlap, как классический cron.
@@ -125,7 +156,6 @@ calendar macros вроде `@daily`. Для `/etc/crontab` с колонкой �
 ```shell
 crontab -l | bin/crontab-to-yaml \
   --profile=prod \
-  --timezone=Europe/Moscow \
   --schema=../vendor/romanfedorskij/cron/resources/schema/crontab.schema.json \
   --output=config/crontab.yaml
 ```

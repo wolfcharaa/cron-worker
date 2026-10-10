@@ -54,7 +54,6 @@ final readonly class YamlConfigLoader implements CronConfigLoaderInterface
 
         $defaults = $this->mapping($root['defaults'] ?? [], '$.defaults');
         $this->onlyKeys($defaults, [
-            'timezone',
             'shell',
             'working_directory',
             'cwd',
@@ -94,7 +93,6 @@ final readonly class YamlConfigLoader implements CronConfigLoaderInterface
         $config = $this->mapping($value, $path);
         $this->onlyKeys($config, [
             'description',
-            'timezone',
             'shell',
             'working_directory',
             'cwd',
@@ -107,9 +105,6 @@ final readonly class YamlConfigLoader implements CronConfigLoaderInterface
         ], $path);
         $this->optionalText($config, 'description', $path);
 
-        $timezone = $this->optionalString($config, 'timezone', $path)
-            ?? $this->optionalString($defaults, 'timezone', '$.defaults')
-            ?? 'UTC';
         $shell = $this->optionalString($config, 'shell', $path)
             ?? $this->optionalString($defaults, 'shell', '$.defaults')
             ?? '/bin/sh';
@@ -141,7 +136,6 @@ final readonly class YamlConfigLoader implements CronConfigLoaderInterface
                 'name',
                 'schedule',
                 'command',
-                'timezone',
                 'shell',
                 'working_directory',
                 'cwd',
@@ -167,8 +161,7 @@ final readonly class YamlConfigLoader implements CronConfigLoaderInterface
             $map->add(new CronTaskDefinition(
                 task: $task,
                 expression: $this->requiredString($job, 'schedule', $jobPath),
-                profile: $profile,
-                timezone: $this->optionalString($job, 'timezone', $jobPath) ?? $timezone,
+                profiles: $profile,
                 chain: $this->chain(
                     $job['then'] ?? [],
                     $jobPath . '.then',

@@ -37,7 +37,7 @@ After receiving direction:
 - read the application's `AGENTS.md`, `composer.json`, console entrypoints,
   container bootstrap, process-supervisor configuration and only the cron paths
   placed in scope;
-- build a table of task name, expression, timezone, profile, command or service,
+- build a table of task name, expression, runtime timezone, profile, command or service,
   working directory, environment, Unix user/UID, output target, overlap policy
   and success-chain relationship;
 - distinguish commands that already exist from shell fragments that must remain
@@ -63,7 +63,7 @@ the inventory into cron-worker configuration.
    `CompositeCronConfigLoader` only when mixed ownership is intentional.
 5. Map environment/server schedules to separate profiles and select one through
    `SchedulerOptions`; do not merge stage and production definitions.
-6. Preserve schedule, timezone, environment, cwd, shell, user/UID, log and
+6. Preserve schedule, the worker-wide timezone, environment, cwd, shell, user/UID, log and
    overlap semantics. Treat `then` steps as one-shot success chains, not new
    scheduled roots.
 7. Let `Scheduler::load()` preflight the selected profile before the Revolt

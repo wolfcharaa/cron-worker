@@ -37,6 +37,15 @@ final readonly class Profile implements \Stringable
     }
 
     /**
+     * @param self|string|\BackedEnum|list<self|string|\BackedEnum> $profiles
+     * @return list<self>
+     */
+    public static function normalizeMany(self|string|\BackedEnum|array $profiles): array
+    {
+        return self::normalizeList(\is_array($profiles) ? $profiles : [$profiles]);
+    }
+
+    /**
      * @param list<self|string|\BackedEnum> $profiles
      * @return list<self>
      */

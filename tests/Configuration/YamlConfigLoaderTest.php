@@ -21,7 +21,6 @@ final class YamlConfigLoaderTest
             version: 1
             profiles:
               stage:
-                timezone: Europe/Moscow
                 shell: /bin/bash
                 working_directory: /var/www/app
                 environment:
@@ -37,7 +36,6 @@ final class YamlConfigLoaderTest
                       - name: notify
                         command: php bin/console app:notify
               prod:
-                timezone: UTC
                 jobs:
                   - name: import
                     schedule: "0 * * * *"
@@ -51,7 +49,6 @@ final class YamlConfigLoaderTest
         $next = $stage->chain->tasks()[0] ?? throw new \LogicException('Chain task is missing.');
 
         Assert::same($stage->expression->toString(), '*/15 * * * *');
-        Assert::same($stage->timezone->getName(), 'Europe/Moscow');
         Assert::instanceOf($stage->task, ExecTaskConfig::class);
         Assert::same($stage->task->workingDirectory, '/var/www/app');
         Assert::same($stage->task->environment, ['APP_ENV' => 'stage', 'BATCH_SIZE' => '100']);
@@ -137,6 +134,22 @@ final class YamlConfigLoaderTest
                   - name: heartbeat
                     schedule: "* * * * *"
                     command: php bin/heartbeat.php
+            YAML))->load();
+    }
+
+    public function rejectsPerTaskTimezone(): void
+    {
+        Expect::exception(InvalidCronConfiguration::class);
+
+        (new YamlConfigLoader(<<<'YAML'
+            version: 1
+            profiles:
+              default:
+                jobs:
+                  - name: heartbeat
+                    schedule: "* * * * *"
+                    command: php bin/heartbeat.php
+                    timezone: Europe/Moscow
             YAML))->load();
     }
 }

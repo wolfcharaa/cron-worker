@@ -12,15 +12,10 @@ final readonly class CronSchedule implements Schedule
 
     private CronExpressionParser $parser;
 
-    private \DateTimeZone $timezone;
-
-    public function __construct(
-        CronExpression|string $expression = CronExpression::DEFAULT,
-        \DateTimeZone|string $timezone = 'UTC',
-    ) {
+    public function __construct(CronExpression|string $expression = CronExpression::DEFAULT)
+    {
         $this->expression = \is_string($expression) ? new CronExpression($expression) : $expression;
         $this->parser = new CronExpressionParser($this->expression->toString());
-        $this->timezone = \is_string($timezone) ? new \DateTimeZone($timezone) : $timezone;
     }
 
     public function nextRunAfter(\DateTimeImmutable $after): \DateTimeImmutable
@@ -28,14 +23,9 @@ final readonly class CronSchedule implements Schedule
         $nextRun = $this->parser->getNextRunDate(
             currentTime: $after,
             allowCurrentDate: false,
-            timeZone: $this->timezone->getName(),
+            timeZone: $after->getTimezone()->getName(),
         );
 
         return \DateTimeImmutable::createFromMutable($nextRun);
-    }
-
-    public function timezone(): \DateTimeZone
-    {
-        return $this->timezone;
     }
 }

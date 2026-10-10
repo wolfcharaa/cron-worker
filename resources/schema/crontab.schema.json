@@ -84,10 +84,6 @@
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "timezone": {
-              "type": "string",
-              "minLength": 1
-            },
             "shell": true,
             "working_directory": true,
             "cwd": true,
@@ -152,10 +148,6 @@
               "type": "string",
               "minLength": 1
             },
-            "timezone": {
-              "type": "string",
-              "minLength": 1
-            },
             "then": {
               "type": "array",
               "items": {
@@ -184,10 +176,6 @@
       "properties": {
         "description": {
           "type": "string"
-        },
-        "timezone": {
-          "type": "string",
-          "minLength": 1
         },
         "shell": {
           "type": "string",

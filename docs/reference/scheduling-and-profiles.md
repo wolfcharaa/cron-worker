@@ -47,8 +47,17 @@ echo $configured->toString();
 Строка остаётся доступна через сокращённый API:
 
 ```php
-$scheduler->cron('legacy-task', '*/5 * * * *', $handler, 'Europe/Moscow');
+$scheduler->cron('legacy-task', '*/5 * * * *', $handler);
 ```
+
+Timezone принадлежит всему scheduler runtime и задаётся один раз:
+
+```php
+$options = new SchedulerOptions(timezone: 'Europe/Moscow');
+```
+
+Так все задачи одного worker-а интерпретируют cron-поля одинаково. Отдельной
+timezone у `CronSchedule`, task builder, attribute или YAML job нет.
 
 ## Profiles
 
@@ -63,6 +72,20 @@ $scheduler
     ->task('ftp-upload', $handler)
     ->profiles('default', 'server-10.11.166.100');
 ```
+
+То же правило действует для declarative configuration:
+
+```php
+#[CronTask(
+    schedule: '*/15 * * * *',
+    profiles: ['stage', 'prod'],
+    method: 'run',
+)]
+```
+
+Если schedule или arguments различаются, используйте несколько repeatable
+attributes. Если конфигурация одинакова, один attribute с `profiles` не
+дублирует definition в исходном коде.
 
 `SchedulerOptions::profile` принимает строку, `Profile` или string-backed enum.
 `any` нельзя объединять с именованными profiles одной задачи. Если shared и

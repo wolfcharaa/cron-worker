@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Wolfcharaa\Cron\Registry;
 
 use Wolfcharaa\Cron\Configuration\Profile;
+use Wolfcharaa\Cron\Exception\DuplicateProfileTask;
 
 final class CronProfileMap
 {
@@ -21,9 +22,14 @@ final class CronProfileMap
 
     public function add(CronTaskDefinition $task): self
     {
-        $this->guardSharedTaskCollision($task);
-        $profile = $this->profiles[$task->profile->name] ??= new CronProfileConfig($task->profile);
-        $profile->add($task);
+        foreach ($task->profiles as $profile) {
+            $this->guardTaskCollision($task, $profile);
+        }
+
+        foreach ($task->profiles as $profile) {
+            $config = $this->profiles[$profile->name] ??= new CronProfileConfig($profile);
+            $config->add($task);
+        }
 
         return $this;
     }
@@ -39,8 +45,19 @@ final class CronProfileMap
 
     public function merge(self $map): self
     {
+        $seen = [];
+
         foreach ($map->profileConfigs() as $profile) {
-            $this->addProfile($profile);
+            foreach ($profile->tasks() as $task) {
+                $id = spl_object_id($task);
+
+                if (isset($seen[$id])) {
+                    continue;
+                }
+
+                $seen[$id] = true;
+                $this->add($task);
+            }
         }
 
         return $this;
@@ -86,9 +103,13 @@ final class CronProfileMap
         return $this->profiles;
     }
 
-    private function guardSharedTaskCollision(CronTaskDefinition $task): void
+    private function guardTaskCollision(CronTaskDefinition $task, Profile $targetProfile): void
     {
-        if ($task->profile->name !== Profile::ANY) {
+        if (($this->profiles[$targetProfile->name] ?? null)?->has($task->name) === true) {
+            throw new DuplicateProfileTask($task->name, $targetProfile->name);
+        }
+
+        if ($targetProfile->name !== Profile::ANY) {
             $sharedProfile = $this->profiles[Profile::ANY] ?? null;
 
             if ($sharedProfile !== null && isset($sharedProfile->tasks()[$task->name])) {

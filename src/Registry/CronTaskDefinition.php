@@ -15,23 +15,34 @@ final readonly class CronTaskDefinition
 
     public CronExpression $expression;
 
-    public \DateTimeZone $timezone;
+    /** @var list<Profile> */
+    public array $profiles;
 
-    public Profile $profile;
-
+    /**
+     * @param Profile|string|\BackedEnum|list<Profile|string|\BackedEnum> $profiles
+     */
     public function __construct(
         public TaskConfigInterface $task,
         CronExpression|string $expression,
-        Profile|string|\BackedEnum $profile = Profile::DEFAULT,
-        \DateTimeZone|string $timezone = 'UTC',
+        Profile|string|\BackedEnum|array $profiles = [Profile::DEFAULT],
         ?ChainConfig $chain = null,
     ) {
         $this->name = $this->task->name();
         $this->expression = \is_string($expression) ? new CronExpression($expression) : $expression;
-        $this->profile = Profile::normalize($profile);
-        $this->timezone = \is_string($timezone) ? new \DateTimeZone($timezone) : $timezone;
+        $this->profiles = Profile::normalizeMany($profiles);
         $this->chain = $chain ?? new ChainConfig();
     }
 
     public ChainConfig $chain;
+
+    public function isDeclaredFor(Profile $profile): bool
+    {
+        foreach ($this->profiles as $declaredProfile) {
+            if ($declaredProfile->name === $profile->name) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

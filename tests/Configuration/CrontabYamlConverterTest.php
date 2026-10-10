@@ -23,7 +23,6 @@ final class CrontabYamlConverterTest
                 @daily php bin/console app:archive
                 CRON,
             profile: 'prod',
-            timezone: 'Europe/Moscow',
             schema: '../vendor/romanfedorskij/cron/resources/schema/crontab.schema.json',
         );
         $document = Yaml::parse($yaml);
@@ -37,7 +36,6 @@ final class CrontabYamlConverterTest
 
         Assert::same($first->name, 'job-1');
         Assert::same($first->expression->toString(), '*/15 * * * *');
-        Assert::same($first->timezone->getName(), 'Europe/Moscow');
         Assert::same($second->expression->toString(), '0 0 * * *');
     }
 }

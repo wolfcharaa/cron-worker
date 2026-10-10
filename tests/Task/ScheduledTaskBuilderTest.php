@@ -20,13 +20,11 @@ final class ScheduledTaskBuilderTest
         $task = (new ScheduledTaskBuilder('cleanup', static fn(): int => 7))
             ->everyMinutes(15)
             ->weekdays()
-            ->timezone('Europe/Moscow')
             ->allowOverlapping()
             ->build();
 
         Assert::instanceOf($task->schedule, CronSchedule::class);
         Assert::same($task->schedule->expression->toString(), '*/15 * * * MON,TUE,WED,THU,FRI');
-        Assert::same($task->schedule->timezone()->getName(), 'Europe/Moscow');
         Assert::same($task->overlapPolicy, OverlapPolicy::Allow);
         Assert::same($task->execute(), 7);
     }

@@ -22,6 +22,7 @@ Master использует Revolt для неблокирующего ожид�
 | --- | --- | --- |
 | Fluent schedule API | `everyMinutes()`, `dailyAt()`, `weekdays()` без ручного cron | [Scheduling и profiles](docs/reference/scheduling-and-profiles.md) |
 | Configuration loaders | Manual API, attributes, YAML и классический crontab | [Configuration sources](docs/guides/configuration-sources.md) |
+| Symfony Console tasks | Прямой запуск `Command::run()` без callback-обёрток приложения | [Configuration sources](docs/guides/configuration-sources.md#attributes) |
 | Guided migration | Готовый Codex skill для переноса cron реального приложения | [Application migration](docs/guides/application-migration.md) |
 | Success chains | Одноразовые callable, service, static, container и exec шаги | [Task chains](docs/guides/task-chains.md) |
 | PSR-11 integration | Новый container scope внутри каждого child-worker | [Container contract](docs/reference/container-contract.md) |
@@ -105,7 +106,11 @@ use Wolfcharaa\Cron\Scheduler;
 require __DIR__ . '/vendor/autoload.php';
 
 $scheduler = new Scheduler(
-    new SchedulerOptions(maxConcurrency: 4, profile: 'default'),
+    new SchedulerOptions(
+        maxConcurrency: 4,
+        profile: 'default',
+        timezone: 'Europe/Moscow',
+    ),
 );
 
 $scheduler
@@ -115,7 +120,6 @@ $scheduler
     })
     ->everyMinutes(5)
     ->weekdays()
-    ->timezone('Europe/Moscow')
     ->withoutOverlapping();
 
 $scheduler->run();

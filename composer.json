@@ -18,6 +18,7 @@
         "psr/container": "^1.1 || ^2.0",
         "psr/log": "^3.0",
         "revolt/event-loop": "^1.0",
+        "symfony/console": "^6.4 || ^7.4",
         "symfony/yaml": "^7.4"
     },
     "require-dev": {
@@ -27,7 +28,6 @@
         "phpstan/phpstan-strict-rules": "^2.1",
         "phpyh/coding-standard": "^2.6.3",
         "rector/rector": "^2.7",
-        "symfony/console": "^7.4",
         "testo/testo": "^0.10.55"
     },
     "autoload": {

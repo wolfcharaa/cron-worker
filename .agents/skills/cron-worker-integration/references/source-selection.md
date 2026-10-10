@@ -42,7 +42,7 @@ Ask before inspecting user or system crontabs outside the repository.
 
 For every discovered job capture:
 
-- schedule and timezone;
+- schedule and the worker-wide timezone;
 - executable command, service method or static callback;
 - working directory, shell and environment;
 - expected Unix username or numeric effective UID;

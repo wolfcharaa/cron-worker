@@ -39,7 +39,10 @@ final class AttributeCronTaskDiscoveryTest
     public function loadsActiveProfileIntoScheduler(): void
     {
         $scheduler = new Scheduler(
-            options: new SchedulerOptions(profile: 'server-10.11.166.100'),
+            options: new SchedulerOptions(
+                profile: 'server-10.11.166.100',
+                timezone: 'Europe/Moscow',
+            ),
             containerFactory: static fn(): ContainerInterface => new ArrayContainer([
                 FisUploadCommand::class => new FisUploadCommand(),
                 ReindexCommand::class => new ReindexCommand(),
@@ -58,7 +61,6 @@ final class AttributeCronTaskDiscoveryTest
         }
 
         Assert::same($upload->schedule->expression->toString(), '*/10 * * * *');
-        Assert::same($upload->schedule->timezone()->getName(), 'Europe/Moscow');
         Assert::same($upload->overlapPolicy, OverlapPolicy::Allow);
         Assert::same($upload->execute(), 0);
     }

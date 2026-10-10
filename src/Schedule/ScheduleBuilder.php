@@ -10,14 +10,9 @@ final class ScheduleBuilder
 {
     private CronExpression $expression;
 
-    private \DateTimeZone $timezone;
-
-    public function __construct(
-        null|CronExpression|string $expression = null,
-        \DateTimeZone|string $timezone = 'UTC',
-    ) {
+    public function __construct(null|CronExpression|string $expression = null)
+    {
         $this->cron($expression ?? CronExpression::DEFAULT);
-        $this->timezone($timezone);
     }
 
     public static function create(): self
@@ -25,11 +20,9 @@ final class ScheduleBuilder
         return new self();
     }
 
-    public static function fromCron(
-        CronExpression|string $expression,
-        \DateTimeZone|string $timezone = 'UTC',
-    ): self {
-        return new self($expression, $timezone);
+    public static function fromCron(CronExpression|string $expression): self
+    {
+        return new self($expression);
     }
 
     public function cron(CronExpression|string $expression): self
@@ -131,13 +124,6 @@ final class ScheduleBuilder
         return $this;
     }
 
-    public function timezone(\DateTimeZone|string $timezone): self
-    {
-        $this->timezone = \is_string($timezone) ? new \DateTimeZone($timezone) : $timezone;
-
-        return $this;
-    }
-
     public function expression(): CronExpression
     {
         return $this->expression;
@@ -145,6 +131,6 @@ final class ScheduleBuilder
 
     public function build(): CronSchedule
     {
-        return new CronSchedule($this->expression, $this->timezone);
+        return new CronSchedule($this->expression);
     }
 }

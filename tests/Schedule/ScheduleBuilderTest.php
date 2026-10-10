@@ -45,13 +45,12 @@ final class ScheduleBuilderTest
         $schedule = ScheduleBuilder::create()
             ->dailyAt(9, 30)
             ->weekdays()
-            ->timezone('Europe/Moscow')
             ->build();
 
-        $nextRun = $schedule->nextRunAfter(new \DateTimeImmutable('2026-10-09 07:00:00 UTC'));
+        $after = new \DateTimeImmutable('2026-10-09 07:00:00 UTC');
+        $nextRun = $schedule->nextRunAfter($after->setTimezone(new \DateTimeZone('Europe/Moscow')));
 
         Assert::same($schedule->expression->toString(), '30 9 * * MON,TUE,WED,THU,FRI');
-        Assert::same($schedule->timezone()->getName(), 'Europe/Moscow');
         Assert::same($nextRun->format('Y-m-d H:i:s P'), '2026-10-12 09:30:00 +03:00');
     }
 

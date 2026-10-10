@@ -14,13 +14,10 @@ final readonly class CrontabConfigLoader implements CronConfigLoaderInterface
 {
     private Profile $profile;
 
-    private \DateTimeZone $timezone;
-
     public static function fromFile(
         string $path,
         Profile|string|\BackedEnum $profile = Profile::DEFAULT,
         bool $systemFormat = false,
-        \DateTimeZone|string $timezone = 'UTC',
     ): self {
         $contents = file_get_contents($path);
 
@@ -28,17 +25,15 @@ final readonly class CrontabConfigLoader implements CronConfigLoaderInterface
             throw new \RuntimeException(\sprintf('Unable to read crontab file: %s', $path));
         }
 
-        return new self($contents, $profile, $systemFormat, $timezone);
+        return new self($contents, $profile, $systemFormat);
     }
 
     public function __construct(
         private string $contents,
         Profile|string|\BackedEnum $profile = Profile::DEFAULT,
         private bool $systemFormat = false,
-        \DateTimeZone|string $timezone = 'UTC',
     ) {
         $this->profile = Profile::normalize($profile);
-        $this->timezone = \is_string($timezone) ? new \DateTimeZone($timezone) : $timezone;
     }
 
     public function load(): CronProfileMap
@@ -64,6 +59,12 @@ final readonly class CrontabConfigLoader implements CronConfigLoaderInterface
             }
 
             if (preg_match('/^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/', $line, $matches) === 1) {
+                if ($matches[1] === 'CRON_TZ') {
+                    throw new \InvalidArgumentException(
+                        'CRON_TZ is not supported per task; configure SchedulerOptions::timezone instead.',
+                    );
+                }
+
                 $environment[$matches[1]] = $this->unquote($matches[2]);
 
                 if ($matches[1] === 'SHELL') {
@@ -86,10 +87,7 @@ final readonly class CrontabConfigLoader implements CronConfigLoaderInterface
                     expectedUser: $user,
                 ),
                 expression: $expression,
-                profile: $this->profile,
-                timezone: isset($environment['CRON_TZ'])
-                    ? new \DateTimeZone($environment['CRON_TZ'])
-                    : $this->timezone,
+                profiles: $this->profile,
             ));
         }
 
