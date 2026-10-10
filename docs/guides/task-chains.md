@@ -95,6 +95,8 @@ use Wolfcharaa\Cron\Configuration\ChainConfig;
 use Wolfcharaa\Cron\Configuration\ContainerTaskConfig;
 use Wolfcharaa\Cron\Configuration\ServiceTaskConfig;
 use Wolfcharaa\Cron\Configuration\StaticTaskConfig;
+use Wolfcharaa\Cron\Configuration\SymfonyCommandTaskConfig;
+use Wolfcharaa\Cron\Configuration\SymfonyInput;
 
 #[CronTask(
     schedule: '*/15 * * * *',
@@ -118,6 +120,14 @@ use Wolfcharaa\Cron\Configuration\StaticTaskConfig;
             arguments: ['operations'],
             taskName: 'notify',
         ),
+        new SymfonyCommandTaskConfig(
+            commandId: PublishReportCommand::class,
+            input: new SymfonyInput(
+                arguments: ['report' => 'daily'],
+                options: ['force' => true],
+            ),
+            taskName: 'publish-report',
+        ),
     ),
 )]
 final class ImportCommand
@@ -136,9 +146,11 @@ final class ImportCommand
 | `ServiceTaskConfig` | service из свежего PSR-11 container |
 | `StaticTaskConfig` | public static method без container |
 | `ContainerTaskConfig` | public static callback с container/context |
+| `SymfonyCommandTaskConfig` | Symfony `Command::run()` с именованным `SymfonyInput` |
 | `ExecTaskConfig` | внешняя shell-команда |
 
 Имена шагов внутри одного `ChainConfig` должны быть уникальны.
+Подробнее: [Symfony Console tasks](symfony-console-tasks.md).
 
 ## Ошибки и остановка
 

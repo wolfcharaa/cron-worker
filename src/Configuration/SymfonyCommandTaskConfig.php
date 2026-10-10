@@ -16,12 +16,11 @@ final readonly class SymfonyCommandTaskConfig implements TaskConfigInterface
     /** @var class-string<Command> */
     public string $commandId;
 
-    /**
-     * @param array<int|string, mixed> $arguments
-     */
+    public SymfonyInput $input;
+
     public function __construct(
         string $commandId,
-        public array $arguments = [],
+        ?SymfonyInput $input = null,
         public ?string $taskName = null,
         public OverlapPolicy $overlapPolicy = OverlapPolicy::Forbid,
     ) {
@@ -41,6 +40,7 @@ final readonly class SymfonyCommandTaskConfig implements TaskConfigInterface
         }
 
         $this->commandId = $commandId;
+        $this->input = $input ?? new SymfonyInput();
 
         if ($this->taskName === '') {
             throw new \InvalidArgumentException('Cron task name must not be empty.');
@@ -66,7 +66,7 @@ final readonly class SymfonyCommandTaskConfig implements TaskConfigInterface
         return new SymfonyCommandTaskHandler(
             containerFactory: $containerFactory,
             commandId: $this->commandId,
-            arguments: $this->arguments,
+            input: $this->input,
         );
     }
 }

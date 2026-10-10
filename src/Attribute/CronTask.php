@@ -9,6 +9,7 @@ use Wolfcharaa\Cron\Configuration\Profile;
 use Wolfcharaa\Cron\Configuration\ServiceTaskConfig;
 use Wolfcharaa\Cron\Registry\CronTaskDefinition;
 use Wolfcharaa\Cron\Schedule\CronExpression;
+use Wolfcharaa\Cron\Schedule\Frequency\EveryTime;
 use Wolfcharaa\Cron\Task\OverlapPolicy;
 
 #[\Attribute(\Attribute::TARGET_CLASS | \Attribute::IS_REPEATABLE)]
@@ -26,7 +27,7 @@ final readonly class CronTask implements CronTaskAttribute
      * @param array<int|string, mixed> $arguments
      */
     public function __construct(
-        string $schedule,
+        CronExpression|EveryTime|string $schedule,
         Profile|string|\BackedEnum|array $profiles = [Profile::DEFAULT],
         public ?string $name = null,
         public ?string $method = null,
@@ -42,7 +43,11 @@ final readonly class CronTask implements CronTaskAttribute
             throw new \InvalidArgumentException('Cron task attribute method must not be empty.');
         }
 
-        $this->expression = new CronExpression($schedule);
+        $this->expression = match (true) {
+            \is_string($schedule) => new CronExpression($schedule),
+            $schedule instanceof EveryTime => $schedule->expression(),
+            default => $schedule,
+        };
         $this->profiles = Profile::normalizeMany($profiles);
         $this->chain = $chain ?? new ChainConfig();
     }

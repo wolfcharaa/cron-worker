@@ -28,6 +28,8 @@ Ask only for information not already provided:
   timer, framework scheduler, or deployment manifest?
 - Are system-format crontabs with a user column present?
 - Which command namespaces/directories and console registrations contain jobs?
+- For staggered minute values, is the exact wall-clock minute required, or did
+  the old scheduler use offsets only to avoid blocking/overlap?
 - Where can a new child-local PSR-11 container be built?
 - Which profiles are required, and which tasks are shared by `any`?
 - Which job is safe for the first live smoke test?
@@ -50,6 +52,10 @@ For every discovered job capture:
 - overlap behavior and global concurrency assumptions;
 - environment/server profile;
 - ordered successors that run only after exit code `0`.
+
+For Symfony Console commands also capture declared argument and option names
+from `configure()`. Keep values as structured input; do not flatten them into a
+PHP service-method argument list.
 
 Surface ambiguities instead of silently normalizing them. In particular,
 classic cron `%`, mail behavior and `@reboot` are not emulated by cron-worker.

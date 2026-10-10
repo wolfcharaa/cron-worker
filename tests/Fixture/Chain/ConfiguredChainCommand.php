@@ -9,10 +9,11 @@ use Wolfcharaa\Cron\Attribute\CronTask;
 use Wolfcharaa\Cron\Configuration\ChainConfig;
 use Wolfcharaa\Cron\Configuration\ContainerTaskConfig;
 use Wolfcharaa\Cron\Configuration\StaticTaskConfig;
+use Wolfcharaa\Cron\Schedule\Frequency\EveryMinutes;
 use Wolfcharaa\Cron\Task\TaskExecutionContext;
 
 #[CronTask(
-    schedule: '*/5 * * * *',
+    schedule: new EveryMinutes(5),
     profiles: 'test',
     name: 'configured-chain',
     chain: new ChainConfig(

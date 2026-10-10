@@ -10,6 +10,8 @@ use Wolfcharaa\Cron\Configuration\ChainConfig;
 use Wolfcharaa\Cron\Configuration\ContainerTaskConfig;
 use Wolfcharaa\Cron\Configuration\ServiceTaskConfig;
 use Wolfcharaa\Cron\Configuration\StaticTaskConfig;
+use Wolfcharaa\Cron\Configuration\SymfonyCommandTaskConfig;
+use Wolfcharaa\Cron\Configuration\SymfonyInput;
 use Wolfcharaa\Cron\Task\TaskExecutionContext;
 
 #[CronTask(
@@ -34,6 +36,14 @@ use Wolfcharaa\Cron\Task\TaskExecutionContext;
             method: 'notify',
             arguments: ['operations'],
             taskName: 'notify',
+        ),
+        new SymfonyCommandTaskConfig(
+            commandId: PublishReportCommand::class,
+            input: new SymfonyInput(
+                arguments: ['report' => 'daily'],
+                options: ['force' => true],
+            ),
+            taskName: 'publish-report',
         ),
     ),
 )]
@@ -67,6 +77,7 @@ final class PipelineCallbacks
 }
 ```
 
-`StaticTaskConfig` не создаёт container. `ContainerTaskConfig` получает новый
-container scope для своего child-процесса. Если любой шаг вернёт ненулевой код,
-следующие шаги не будут поставлены в очередь.
+`StaticTaskConfig` не создаёт container. `ContainerTaskConfig` и
+`SymfonyCommandTaskConfig` получают новый container scope для своего
+child-процесса. Если любой шаг вернёт ненулевой код, следующие шаги не будут
+поставлены в очередь.

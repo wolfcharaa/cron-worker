@@ -9,7 +9,8 @@
   допустимый declared return type;
 - для container callback: два первых аргумента под container/context,
   дополнительные arguments и return type;
-- наличие `ContainerFactory` для service/container задач;
+- наличие `ContainerFactory` для service/container и Symfony Console задач;
+- структуру именованных Symfony arguments/options без создания container;
 - создание handler-а для каждого корневого и chain task config;
 - точный path каждой ошибки внутри profile map.
 
@@ -52,6 +53,11 @@ Validator не создаёт PSR-11 container и не открывает applic
 Для opaque `serviceId` нельзя заранее доказать, что `container->get()` вернёт
 callable нужного типа, не нарушив child-local scope. Такая ошибка остаётся
 runtime-ошибкой конкретного child process.
+
+По той же причине master не создаёт Symfony command с constructor dependencies.
+Существование конкретного argument/option проверяет `ArrayInput` по command
+definition уже внутри child, но до вызова `Command::execute()`. `SymfonyInput`
+раньше отклоняет позиционные arguments, пустые имена и option с префиксом `--`.
 
 YAML syntax/schema и crontab grammar проверяются соответствующими loaders ещё
 до построения `CronProfileMap`.

@@ -22,7 +22,7 @@ Master использует Revolt для неблокирующего ожид�
 | --- | --- | --- |
 | Fluent schedule API | `everyMinutes()`, `dailyAt()`, `weekdays()` без ручного cron | [Scheduling и profiles](docs/reference/scheduling-and-profiles.md) |
 | Configuration loaders | Manual API, attributes, YAML и классический crontab | [Configuration sources](docs/guides/configuration-sources.md) |
-| Symfony Console tasks | Прямой запуск `Command::run()` без callback-обёрток приложения | [Configuration sources](docs/guides/configuration-sources.md#attributes) |
+| Symfony Console tasks | Именованные arguments/options через `InputInterface` без callback-обёрток | [Symfony Console tasks](docs/guides/symfony-console-tasks.md) |
 | Guided migration | Готовый Codex skill для переноса cron реального приложения | [Application migration](docs/guides/application-migration.md) |
 | Success chains | Одноразовые callable, service, static, container и exec шаги | [Task chains](docs/guides/task-chains.md) |
 | PSR-11 integration | Новый container scope внутри каждого child-worker | [Container contract](docs/reference/container-contract.md) |
@@ -74,11 +74,12 @@ manual / attributes / YAML / crontab
 
 1. [Quick start](docs/guides/quick-start.md) — первый ручной scheduler.
 2. [Configuration sources](docs/guides/configuration-sources.md) — выбор loader-а и profiles.
-3. [Application migration](docs/guides/application-migration.md) — перенос существующих cron-задач с помощью skill.
-4. [Task chains](docs/guides/task-chains.md) — service/static/container pipelines.
-5. [Application worker](docs/examples/application-worker.md) — полный `bin/cron.php`.
-6. [Runtime](docs/reference/runtime.md) — fork, Revolt, overlap и shutdown.
-7. [Configuration validation](docs/reference/configuration-validation.md) — fail-fast контракт.
+3. [Symfony Console tasks](docs/guides/symfony-console-tasks.md) — input, container, chain и troubleshooting.
+4. [Application migration](docs/guides/application-migration.md) — перенос существующих cron-задач с помощью skill.
+5. [Task chains](docs/guides/task-chains.md) — service/static/container pipelines.
+6. [Application worker](docs/examples/application-worker.md) — полный `bin/cron.php`.
+7. [Runtime](docs/reference/runtime.md) — fork, Revolt, overlap и shutdown.
+8. [Configuration validation](docs/reference/configuration-validation.md) — fail-fast контракт.
 
 ## Установка
 
@@ -91,7 +92,7 @@ composer require romanfedorskij/cron
 - PHP `^8.2` на Unix-like системе;
 - `ext-pcntl` и `ext-posix`;
 - Revolt event loop;
-- любой PSR-11 container нужен только для service/container задач.
+- PSR-11 container нужен для service/container и Symfony Console задач.
 
 ## Quick start
 
@@ -154,8 +155,10 @@ public static function notify(
 }
 ```
 
-В атрибутах те же шаги задаются через `StaticTaskConfig` и
-`ContainerTaskConfig`. См. [полный пример attribute pipeline](docs/examples/attribute-pipeline.md).
+В атрибутах те же шаги задаются через `StaticTaskConfig`,
+`ContainerTaskConfig` и `SymfonyCommandTaskConfig`. См.
+[полный пример attribute pipeline](docs/examples/attribute-pipeline.md) и
+[Symfony Console tasks](docs/guides/symfony-console-tasks.md).
 
 ## Документация по разделам
 
@@ -163,6 +166,7 @@ public static function notify(
 
 - [Quick start](docs/guides/quick-start.md)
 - [Configuration sources](docs/guides/configuration-sources.md)
+- [Symfony Console tasks](docs/guides/symfony-console-tasks.md)
 - [Application migration](docs/guides/application-migration.md)
 - [Task chains](docs/guides/task-chains.md)
 

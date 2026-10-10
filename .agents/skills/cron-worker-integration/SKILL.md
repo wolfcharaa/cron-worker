@@ -40,8 +40,11 @@ After receiving direction:
 - build a table of task name, expression, runtime timezone, profile, command or service,
   working directory, environment, Unix user/UID, output target, overlap policy
   and success-chain relationship;
-- distinguish commands that already exist from shell fragments that must remain
-  exec tasks;
+- distinguish Symfony Console `Command` classes, ordinary services and shell
+  fragments that must remain exec tasks; for Symfony commands map CLI arguments
+  and options to their names from `configure()`;
+- mark minute offsets that may exist only to serialize a blocking legacy cron,
+  separately from exact wall-clock requirements;
 - flag destructive, externally visible or long-running jobs before any live
   execution;
 - identify duplicate schedules and conflicts, but preserve behavior unless the
@@ -63,9 +66,11 @@ the inventory into cron-worker configuration.
    `CompositeCronConfigLoader` only when mixed ownership is intentional.
 5. Map environment/server schedules to separate profiles and select one through
    `SchedulerOptions`; do not merge stage and production definitions.
-6. Preserve schedule, the worker-wide timezone, environment, cwd, shell, user/UID, log and
-   overlap semantics. Treat `then` steps as one-shot success chains, not new
-   scheduled roots.
+6. Preserve schedule, the worker-wide timezone, environment, cwd, shell,
+   user/UID, log and overlap semantics. Simplify artificial minute staggering
+   only after confirming jobs are independent and `maxConcurrency` covers the
+   resulting peak; preserve exact business times. Treat real dependencies as
+   one-shot success chains, not delayed scheduled roots.
 7. Let `Scheduler::load()` preflight the selected profile before the Revolt
    event loop starts.
 

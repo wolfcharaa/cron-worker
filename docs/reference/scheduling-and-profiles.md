@@ -26,6 +26,31 @@ $scheduler
 Это календарные cron-интервалы. Например, `everyMinutes(15)` даёт
 `*/15 * * * *`, а `everyHours(4)` — `0 */4 * * *`.
 
+В attributes используются те же типы без cron-строки:
+
+```php
+use Wolfcharaa\Cron\Attribute\SymfonyTask;
+use Wolfcharaa\Cron\Schedule\Frequency\EveryMinutes;
+
+#[SymfonyTask(schedule: new EveryMinutes(15))]
+```
+
+`CronTask` и `SymfonyTask` принимают `EveryTime`, `CronExpression` или строку.
+Строка нужна для точного календарного правила; типизированный интервал удобнее
+для обычного «каждые N минут/часов/дней».
+
+## Исторические смещения между задачами
+
+Forked workers не блокируют master, поэтому независимые задачи не требуется
+разносить по разным минутам только ради последовательного исполнения. Такие
+смещения можно заменить одинаковой естественной границей интервала после
+проверки `maxConcurrency` и допустимости параллельного запуска.
+
+Не упрощайте expression, если конкретная минута имеет бизнес-смысл. Зависимые
+задачи связывайте success-chain, а не приблизительной задержкой в cron. Учтите:
+корневой scheduled tick пропускается при занятом global concurrency limit;
+one-shot chain step, напротив, остаётся в очереди.
+
 ## CronExpression
 
 Низкоуровневый immutable value object можно создать из строки или собрать по

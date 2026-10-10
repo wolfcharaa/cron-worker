@@ -69,12 +69,17 @@ child-local container и вызовет стандартный `Command::run()`.
 ```php
 use Symfony\Component\Console\Command\Command;
 use Wolfcharaa\Cron\Attribute\SymfonyTask;
+use Wolfcharaa\Cron\Configuration\SymfonyInput;
+use Wolfcharaa\Cron\Schedule\Frequency\EveryMinutes;
 
 #[SymfonyTask(
-    schedule: '*/5 * * * *',
+    schedule: new EveryMinutes(5),
     profiles: ['stage', 'prod'],
     name: 'refresh-search-index',
-    arguments: ['people'],
+    input: new SymfonyInput(
+        arguments: ['index' => 'people'],
+        options: ['force' => true],
+    ),
 )]
 final class RefreshSearchIndexCommand extends Command
 {
@@ -84,7 +89,8 @@ final class RefreshSearchIndexCommand extends Command
 
 Приложение может связать `OutputInterface` со своим файловым output и
 зарегистрировать `HelperSet` для framework-specific helpers. Отдельный static
-callback рядом с command не нужен.
+callback рядом с command не нужен. Имена arguments/options, chain и диагностика
+описаны в [Symfony Console tasks](symfony-console-tasks.md).
 
 ## YAML
 

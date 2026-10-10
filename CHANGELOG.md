@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0-rc.3] - 2026-10-10
+
+### Added
+
+- `SymfonyInput` for configuring named Symfony Console arguments and options
+  through the command's standard `InputInterface`.
+- Typed `EveryTime` and `CronExpression` schedules in task attributes.
+
+### Changed
+
+- `SymfonyTask` and `SymfonyCommandTaskConfig` now accept `input` instead of
+  positional handler-style `arguments`; Symfony tasks always run non-interactively.
+
 ## [0.1.0-rc.2] - 2026-10-10
 
 ### Added

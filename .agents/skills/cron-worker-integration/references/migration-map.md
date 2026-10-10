@@ -112,6 +112,40 @@ Use `ClassListProvider` for a small explicit set, `ComposerClassMapProvider` for
 an existing optimized class map, `ChainClassProvider` to combine providers and
 `RegexFilterClassProvider` to narrow a broad provider.
 
+### Symfony Console commands
+
+When a discovered class extends Symfony `Command`, prefer `SymfonyTask` over a
+`CronTask` service callback. Read its `configure()` method and map ordinary CLI
+input by declared name:
+
+```php
+use Symfony\Component\Console\Command\Command;
+use Wolfcharaa\Cron\Attribute\SymfonyTask;
+use Wolfcharaa\Cron\Configuration\SymfonyInput;
+use Wolfcharaa\Cron\Schedule\Frequency\EveryMinutes;
+
+#[SymfonyTask(
+    schedule: new EveryMinutes(15),
+    profiles: ['stage', 'prod'],
+    input: new SymfonyInput(
+        arguments: ['index' => 'people'],
+        options: ['limit' => 500, 'force' => true],
+    ),
+)]
+final class RefreshIndexCommand extends Command
+{
+}
+```
+
+This represents `people --limit=500 --force`. Use argument keys exactly as
+declared by `addArgument()` and option keys exactly as declared by `addOption()`,
+without `--`. Do not use a positional list and do not include the console
+command name. Constructor-injected commands must be registered by class-string
+in the child-local PSR-11 container.
+
+For a Symfony successor use `SymfonyCommandTaskConfig` with the same
+`SymfonyInput` object inside `ChainConfig`; it runs once after exit code `0`.
+
 ## Manual registrations
 
 ```php
@@ -126,6 +160,24 @@ Container callbacks receive `ContainerInterface`, then
 use `then()`, `thenService()`, `thenStatic()` or `thenContainer()` on the root or
 previous chain builder. A successor has no cron expression and runs once only
 after exit code `0`.
+
+## Simplifying legacy minute staggering
+
+Do not automatically preserve different minute offsets when they only kept a
+blocking legacy scheduler from running jobs together. Independent forked tasks
+may share a readable interval such as `new EveryMinutes(15)` or
+`->everyMinutes(15)`.
+
+Before changing expressions:
+
+1. confirm the minute itself is not a business or external-system contract;
+2. confirm the jobs do not depend on execution order or shared mutable state;
+3. size `SchedulerOptions::maxConcurrency` for the peak number of roots;
+4. retain `OverlapPolicy::Forbid` for a task that must not overlap itself;
+5. represent actual ordering with a success-chain.
+
+This capacity check is required because a root scheduled tick is skipped when
+all concurrency slots are occupied. A chain step is queued instead of skipped.
 
 ## Worker composition
 
@@ -158,4 +210,5 @@ be registered on the same scheduler before `load()`.
 For deeper contracts use the package documentation under
 `vendor/romanfedorskij/cron/docs/`, especially `guides/configuration-sources.md`,
 `guides/task-chains.md`, `reference/container-contract.md` and
-`reference/runtime.md`.
+`reference/runtime.md`. For Symfony input mapping and troubleshooting, use
+`guides/symfony-console-tasks.md`.

@@ -27,7 +27,7 @@ autoload
 ```
 
 Container bootstrap хранится как callback и не выполняется при сборке карты.
-Он будет вызван внутри service/container handler после fork.
+Он будет вызван внутри service/container/Symfony handler после fork.
 
 ## Минимальная композиция
 

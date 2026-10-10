@@ -14,12 +14,17 @@ calling protected `execute()` methods directly.
 ```php
 use Symfony\Component\Console\Command\Command;
 use Wolfcharaa\Cron\Attribute\SymfonyTask;
+use Wolfcharaa\Cron\Configuration\SymfonyInput;
+use Wolfcharaa\Cron\Schedule\Frequency\EveryMinutes;
 
 #[SymfonyTask(
-    schedule: '*/5 * * * *',
+    schedule: new EveryMinutes(5),
     profiles: ['stage', 'prod'],
     name: 'refresh-search-index',
-    arguments: ['people'],
+    input: new SymfonyInput(
+        arguments: ['index' => 'people'],
+        options: ['force' => true],
+    ),
 )]
 final class RefreshSearchIndexCommand extends Command
 {
@@ -29,7 +34,7 @@ final class RefreshSearchIndexCommand extends Command
 
 `SymfonyTask` is valid only on a Symfony `Command`. Its default target is the
 annotated command class, so the attribute has no callback `method`. Profiles
-with identical schedule, arguments and chain share one attribute; use a
+with identical schedule, input and chain share one attribute; use a
 repeatable attribute only when those settings differ.
 
 Timezone is deliberately absent from the task. One
@@ -44,8 +49,8 @@ For every due task, inside the forked child process, the library must:
    instance for simple commands.
 3. Resolve optional `HelperSet` and `OutputInterface` services by their Symfony
    interface/class ids. Use `ConsoleOutput` only when no output service exists.
-4. Convert configured arguments to `ArrayInput`. Positional values map to the
-   command's declared arguments; associative input is passed as Symfony input.
+4. Convert named `SymfonyInput` arguments and options to `ArrayInput`; configured
+   option names receive the Symfony `--` prefix.
 5. Invoke public `Command::run()` and return its exit code to the scheduler.
 
 The container factory must never capture a container or connection created in
@@ -69,6 +74,7 @@ No application-specific task runner or `runScheduled()` method is required.
 - [x] Execute commands through a child-local `SymfonyCommandTaskHandler`.
 - [x] Discover multiple task attribute types through a shared contract.
 - [x] Cover deferred container creation, input mapping, helpers and output.
+- [x] Separate named Symfony arguments/options through `SymfonyInput`.
 - [x] Regenerate and verify PHP 8.2-8.5 lowest/highest dependency sets before
   release. Symfony Console 6.4.24 and 7.4 dependency sets pass.
 - [x] Document application migration and a complete worker example.

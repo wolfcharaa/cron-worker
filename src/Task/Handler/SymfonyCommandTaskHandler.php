@@ -10,6 +10,7 @@ use Symfony\Component\Console\Helper\HelperSet;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\ConsoleOutput;
 use Symfony\Component\Console\Output\OutputInterface;
+use Wolfcharaa\Cron\Configuration\SymfonyInput;
 use Wolfcharaa\Cron\Container\ContainerFactory;
 use Wolfcharaa\Cron\Task\TaskExecutionContext;
 
@@ -17,12 +18,11 @@ final readonly class SymfonyCommandTaskHandler implements TaskHandler
 {
     /**
      * @param class-string<Command> $commandId
-     * @param array<int|string, mixed> $arguments
      */
     public function __construct(
         private ContainerFactory $containerFactory,
         private string $commandId,
-        private array $arguments = [],
+        private SymfonyInput $input = new SymfonyInput(),
     ) {}
 
     public function execute(TaskExecutionContext $_context): int
@@ -44,10 +44,10 @@ final readonly class SymfonyCommandTaskHandler implements TaskHandler
             $command->setHelperSet($helperSet);
         }
 
-        return $command->run(
-            new ArrayInput($this->inputArguments($command), $command->getDefinition()),
-            $this->output($container),
-        );
+        $input = new ArrayInput($this->input->parameters(), $command->getDefinition());
+        $input->setInteractive(false);
+
+        return $command->run($input, $this->output($container));
     }
 
     private function command(ContainerInterface $container): Command
@@ -96,32 +96,5 @@ final readonly class SymfonyCommandTaskHandler implements TaskHandler
         }
 
         return $output;
-    }
-
-    /** @return array<int|string, mixed> */
-    private function inputArguments(Command $command): array
-    {
-        if (!array_is_list($this->arguments)) {
-            return $this->arguments;
-        }
-
-        $definitions = array_values($command->getDefinition()->getArguments());
-        $input = [];
-
-        foreach ($this->arguments as $position => $value) {
-            $definition = $definitions[$position] ?? null;
-
-            if ($definition === null) {
-                throw new \InvalidArgumentException(\sprintf(
-                    'Symfony command "%s" does not accept positional argument #%d.',
-                    $this->commandId,
-                    $position + 1,
-                ));
-            }
-
-            $input[$definition->getName()] = $value;
-        }
-
-        return $input;
     }
 }
