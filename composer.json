@@ -11,6 +11,7 @@
     ],
     "require": {
         "php": "^8.2",
+        "ext-ctype": "*",
         "ext-pcntl": "*",
         "ext-posix": "*",
         "dragonmantank/cron-expression": "^3.6",
@@ -28,6 +29,8 @@
         "phpstan/phpstan-strict-rules": "^2.1",
         "phpyh/coding-standard": "^2.6.3",
         "rector/rector": "^2.7",
+        "testo/assert": "^0.1.17",
+        "testo/test": "^0.1.8",
         "testo/testo": "^0.10.55"
     },
     "autoload": {

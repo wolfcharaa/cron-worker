@@ -19,6 +19,7 @@ final class SchedulerContainerTest
     public function resolvesServiceFromFreshContainerDuringExecution(): void
     {
         $factoryCalls = 0;
+        $exitCode = $this->expectedExitCode();
         $scheduler = new Scheduler(
             containerFactory: static function () use (&$factoryCalls): ContainerInterface {
                 ++$factoryCalls;
@@ -34,12 +35,15 @@ final class SchedulerContainerTest
             },
         );
         $task = $scheduler
-            ->serviceTask('service-task', 'command', 'run', [17])
+            ->serviceTask('service-task', 'command', 'run', [$exitCode])
             ->build();
 
         Assert::same($factoryCalls, 0);
-        Assert::same($task->execute(), 17);
-        Assert::same($task->execute(), 17);
+
+        if ($task->execute() !== $exitCode || $task->execute() !== $exitCode) {
+            throw new \LogicException('Service task did not return the configured exit code.');
+        }
+
         Assert::same($factoryCalls, 2);
     }
 
@@ -78,5 +82,10 @@ final class SchedulerContainerTest
 
         Expect::exception(MissingContainerFactory::class);
         $scheduler->serviceTask('service-task', 'command');
+    }
+
+    private function expectedExitCode(): int
+    {
+        return 17;
     }
 }

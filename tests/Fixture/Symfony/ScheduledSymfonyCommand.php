@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace Wolfcharaa\Cron\Tests\Fixture\Symfony;
 
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Helper\HelperInterface;
-use Symfony\Component\Console\Helper\HelperSet;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -68,46 +66,5 @@ final class ScheduledSymfonyCommand extends Command
         $output->writeln('scope=' . $this->receivedScope);
 
         return self::SUCCESS;
-    }
-}
-
-final class FollowUpSymfonyCommand extends Command
-{
-    public ?string $receivedMessage = null;
-
-    protected function configure(): void
-    {
-        $this
-            ->addArgument('message', InputArgument::REQUIRED)
-            ->addOption('uppercase', null, InputOption::VALUE_NONE);
-    }
-
-    protected function execute(InputInterface $input, OutputInterface $output): int
-    {
-        $message = $input->getArgument('message');
-        $this->receivedMessage = \is_string($message) ? $message : null;
-
-        if ((bool) $input->getOption('uppercase')) {
-            $this->receivedMessage = strtoupper((string) $this->receivedMessage);
-        }
-
-        $output->writeln('message=' . $this->receivedMessage);
-
-        return self::SUCCESS;
-    }
-}
-
-final class FixtureHelper implements HelperInterface
-{
-    public function setHelperSet(?HelperSet $helperSet): void {}
-
-    public function getHelperSet(): ?HelperSet
-    {
-        return null;
-    }
-
-    public function getName(): string
-    {
-        return 'fixture';
     }
 }

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-10
+
+### Changed
+
+- Promoted the tested `0.1.0-rc.3` API to the first stable release without
+  public contract changes.
+- Release checks now resolve test fixtures through PSR-4 and explicitly declare
+  every runtime and test dependency used by the package.
+
 ## [0.1.0-rc.3] - 2026-10-10
 
 ### Added
