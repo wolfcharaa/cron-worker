@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace Wolfcharaa\Cron\Configuration\Loader;
 
-use Wolfcharaa\Cron\Registry\CronProfileMap;
+use Wolfcharaa\Cron\Configuration\CronProfileMap;
 
+/** Combines complete loader outputs without mutating child maps. */
 final readonly class CompositeCronConfigLoader implements CronConfigLoaderInterface
 {
     /** @var list<CronConfigLoaderInterface> */
@@ -16,14 +17,15 @@ final readonly class CompositeCronConfigLoader implements CronConfigLoaderInterf
         $this->loaders = array_values($loaders);
     }
 
+    /** Loads all sources in constructor order and validates collisions. */
     public function load(): CronProfileMap
     {
-        $map = new CronProfileMap();
+        $definitions = [];
 
         foreach ($this->loaders as $loader) {
-            $map->merge($loader->load());
+            array_push($definitions, ...$loader->load()->definitions());
         }
 
-        return $map;
+        return new CronProfileMap($definitions);
     }
 }

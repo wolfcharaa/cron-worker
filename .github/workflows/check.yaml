@@ -11,12 +11,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  templates:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - run: make templates-check
-
   code-style:
     runs-on: ubuntu-latest
     steps:
@@ -47,6 +41,14 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: PHP_VERSION=${{ matrix.php }} DEPENDENCY_MODE=${{ matrix.deps }} make test-php-version
+
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - run: composer archive:check
+      - run: composer consumer:check
 
   # infect:
   #   runs-on: ubuntu-latest

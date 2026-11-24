@@ -7,15 +7,17 @@ namespace Wolfcharaa\Cron\Configuration\Loader;
 use Symfony\Component\Yaml\Exception\ParseException;
 use Symfony\Component\Yaml\Yaml;
 use Wolfcharaa\Cron\Configuration\ChainConfig;
+use Wolfcharaa\Cron\Configuration\CronProfileMap;
+use Wolfcharaa\Cron\Configuration\CronTaskDefinition;
 use Wolfcharaa\Cron\Configuration\ExecTaskConfig;
 use Wolfcharaa\Cron\Configuration\Profile;
 use Wolfcharaa\Cron\Exception\InvalidCronConfiguration;
-use Wolfcharaa\Cron\Registry\CronProfileMap;
-use Wolfcharaa\Cron\Registry\CronTaskDefinition;
 use Wolfcharaa\Cron\Task\OverlapPolicy;
 
+/** Loads the strict version-1 YAML shell-exec catalog. */
 final readonly class YamlConfigLoader implements CronConfigLoaderInterface
 {
+    /** Creates a loader from a readable YAML file. */
     public static function fromFile(string $path): self
     {
         $contents = file_get_contents($path);
@@ -32,6 +34,7 @@ final readonly class YamlConfigLoader implements CronConfigLoaderInterface
         private string $source = '<string>',
     ) {}
 
+    /** Parses and validates the full YAML document. */
     public function load(): CronProfileMap
     {
         try {
@@ -48,7 +51,7 @@ final readonly class YamlConfigLoader implements CronConfigLoaderInterface
         $this->onlyKeys($root, ['version', '$schema', 'defaults', 'profiles'], '$');
         $this->optionalString($root, '$schema', '$');
 
-        if (\array_key_exists('version', $root) && $root['version'] !== 1) {
+        if (!\array_key_exists('version', $root) || $root['version'] !== 1) {
             throw $this->invalid('$.version', 'must be the integer 1.');
         }
 
@@ -65,30 +68,31 @@ final readonly class YamlConfigLoader implements CronConfigLoaderInterface
         ], '$.defaults');
         $profiles = $this->mapping($root['profiles'] ?? null, '$.profiles');
 
-        if ($profiles === []) {
-            throw $this->invalid('$.profiles', 'must define at least one profile.');
-        }
-
-        $map = new CronProfileMap();
+        $definitions = [];
 
         foreach ($profiles as $profileName => $profileValue) {
             if (!\is_string($profileName)) {
                 throw $this->invalid('$.profiles', 'profile names must be strings.');
             }
 
-            $this->loadProfile($map, new Profile($profileName), $profileValue, $defaults);
+            array_push(
+                $definitions,
+                ...$this->loadProfile(new Profile($profileName), $profileValue, $defaults),
+            );
         }
 
-        return $map;
+        return new CronProfileMap($definitions);
     }
 
-    /** @param array<array-key, mixed> $defaults */
+    /**
+     * @param array<array-key, mixed> $defaults
+     * @return list<CronTaskDefinition>
+     */
     private function loadProfile(
-        CronProfileMap $map,
         Profile $profile,
         mixed $value,
         array $defaults,
-    ): void {
+    ): array {
         $path = '$.profiles.' . $profile->name;
         $config = $this->mapping($value, $path);
         $this->onlyKeys($config, [
@@ -129,6 +133,8 @@ final readonly class YamlConfigLoader implements CronConfigLoaderInterface
             throw $this->invalid($path . '.jobs', 'must contain at least one job.');
         }
 
+        $definitions = [];
+
         foreach ($jobs as $index => $job) {
             $jobPath = \sprintf('%s.jobs[%d]', $path, $index);
             $job = $this->mapping($job, $jobPath);
@@ -158,7 +164,7 @@ final readonly class YamlConfigLoader implements CronConfigLoaderInterface
                 inheritedOutputFile: $outputFile,
             );
 
-            $map->add(new CronTaskDefinition(
+            $definitions[] = new CronTaskDefinition(
                 task: $task,
                 expression: $this->requiredString($job, 'schedule', $jobPath),
                 profiles: $profile,
@@ -167,8 +173,10 @@ final readonly class YamlConfigLoader implements CronConfigLoaderInterface
                     $jobPath . '.then',
                     $task,
                 ),
-            ));
+            );
         }
+
+        return $definitions;
     }
 
     /**

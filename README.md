@@ -1,198 +1,57 @@
-# Cron worker
+# Cron
 
-Подключаемая PHP-библиотека для запуска cron-задач в отдельных fork-процессах.
-Master использует Revolt для неблокирующего ожидания таймеров и сигналов, а
-блокирующая работа выполняется только внутри child-worker.
+[English](README.en.md)
 
-## Зачем это ставить
+`romanfedorskij/cron` — Unix-библиотека для постоянно работающего cron-worker:
+она вычисляет расписания с минутной точностью, запускает каждую задачу в
+отдельном процессе и управляет overlap, цепочками и корректной остановкой.
 
-Библиотека полезна, когда приложению нужно:
+Пакет подходит, когда приложению нужны PHP-service, Symfony Command или
+shell-задачи с единым процессом-планировщиком. Он не предназначен для Windows,
+sub-minute таймеров, распределённой очереди, переключения Unix user или
+Kubernetes one-shot jobs.
 
-- держать один long-running scheduler вместо отдельного процесса cron на каждую задачу;
-- описывать расписания fluent API, атрибутами, YAML или обычным crontab;
-- выбирать независимые планы `dev`, `stage`, `prod` или серверные профили;
-- получать свежий PSR-11 container scope и новые подключения на каждый запуск;
-- последовательно запускать одноразовые шаги только после exit code `0`;
-- ограничивать пересечения и общее число одновременно работающих процессов;
-- находить ошибки callable и конфигурации до запуска event loop.
-
-## Что предоставляет библиотека
-
-| Возможность | Для чего нужна | Подробности |
-| --- | --- | --- |
-| Fluent schedule API | `everyMinutes()`, `dailyAt()`, `weekdays()` без ручного cron | [Scheduling и profiles](docs/reference/scheduling-and-profiles.md) |
-| Configuration loaders | Manual API, attributes, YAML и классический crontab | [Configuration sources](docs/guides/configuration-sources.md) |
-| Symfony Console tasks | Именованные arguments/options через `InputInterface` без callback-обёрток | [Symfony Console tasks](docs/guides/symfony-console-tasks.md) |
-| Guided migration | Готовый Codex skill для переноса cron реального приложения | [Application migration](docs/guides/application-migration.md) |
-| Success chains | Одноразовые callable, service, static, container и exec шаги | [Task chains](docs/guides/task-chains.md) |
-| PSR-11 integration | Новый container scope внутри каждого child-worker | [Container contract](docs/reference/container-contract.md) |
-| Preflight validation | Ошибки карты и callable до регистрации задач | [Configuration validation](docs/reference/configuration-validation.md) |
-| Revolt runtime | Таймеры, сигналы и неблокирующий master process | [Runtime](docs/reference/runtime.md) |
-| Worker bootstrap | Явная композиция loaders и приложения в `bin/cron.php` | [Application worker](docs/examples/application-worker.md) |
-| Crontab conversion | Перенос `crontab -l` в управляемый YAML | [Configuration sources](docs/guides/configuration-sources.md#классический-crontab) |
-
-## Общая модель
-
-```text
-manual / attributes / YAML / crontab
-                 |
-                 v
-          CronProfileMap
-                 |
-                 v
-       preflight validation
-                 |
-                 v
-      Revolt scheduler master
-                 |
-                 v
-        forked task process
-                 |
-          exit code == 0
-                 |
-                 v
-       next one-shot task
-```
-
-Расписание принадлежит только корневой задаче. Шаги `then*()` не получают
-собственный cron и ставятся во внутреннюю очередь лишь после успешного
-завершения предыдущего процесса.
-
-## Что остаётся на стороне приложения
-
-Библиотека планирует и исполняет задачи, но не заменяет framework, DI container
-или process supervisor. Приложение определяет:
-
-- какие команды и services существуют;
-- как создаётся свежий PSR-11 container;
-- какой профиль активен на конкретном runtime;
-- где хранятся YAML/crontab файлы;
-- как scheduler запускается и перезапускается через systemd, Docker или supervisor;
-- куда отправляются lifecycle-логи.
-
-## Как читать документацию
-
-1. [Quick start](docs/guides/quick-start.md) — первый ручной scheduler.
-2. [Configuration sources](docs/guides/configuration-sources.md) — выбор loader-а и profiles.
-3. [Symfony Console tasks](docs/guides/symfony-console-tasks.md) — input, container, chain и troubleshooting.
-4. [Application migration](docs/guides/application-migration.md) — перенос существующих cron-задач с помощью skill.
-5. [Task chains](docs/guides/task-chains.md) — service/static/container pipelines.
-6. [Application worker](docs/examples/application-worker.md) — полный `bin/cron.php`.
-7. [Runtime](docs/reference/runtime.md) — fork, Revolt, overlap и shutdown.
-8. [Configuration validation](docs/reference/configuration-validation.md) — fail-fast контракт.
+Требования: PHP 8.2–8.5, Unix и расширения `pcntl`, `posix`, `ctype`.
 
 ## Установка
 
-```shell
-composer require romanfedorskij/cron
+```bash
+composer require romanfedorskij/cron:^0.2
 ```
 
-Требования:
+## Первый наблюдаемый запуск
 
-- PHP `^8.2` на Unix-like системе;
-- `ext-pcntl` и `ext-posix`;
-- Revolt event loop;
-- PSR-11 container нужен для service/container и Symfony Console задач.
+Создайте чистый проект и скопируйте поставляемый пример:
 
-## Quick start
-
-```php
-<?php
-
-declare(strict_types=1);
-
-use Wolfcharaa\Cron\Runtime\SchedulerOptions;
-use Wolfcharaa\Cron\Scheduler;
-
-require __DIR__ . '/vendor/autoload.php';
-
-$scheduler = new Scheduler(
-    new SchedulerOptions(
-        maxConcurrency: 4,
-        profile: 'default',
-        timezone: 'Europe/Moscow',
-    ),
-);
-
-$scheduler
-    ->task('cleanup', static function (): int {
-        // Код выполняется в child-worker и не блокирует master event loop.
-        return 0;
-    })
-    ->everyMinutes(5)
-    ->weekdays()
-    ->withoutOverlapping();
-
-$scheduler->run();
+```bash
+mkdir cron-heartbeat && cd cron-heartbeat
+composer init --name=app/cron-heartbeat --license=proprietary --no-interaction
+composer require romanfedorskij/cron:^0.2
+mkdir -p bin
+cp vendor/romanfedorskij/cron/examples/consumer/bin/heartbeat.php bin/
+php bin/heartbeat.php
 ```
 
-Полный разбор: [docs/guides/quick-start.md](docs/guides/quick-start.md).
+Не позднее следующей границы минуты forked child напечатает:
 
-## Chain quick start
-
-```php
-$scheduler
-    ->serviceTask('import', ImportCommand::class, 'run')
-    ->everyMinutes(15)
-    ->thenStatic('reindex', SearchIndex::class, 'rebuild', ['products'])
-    ->thenContainer(
-        'notify',
-        [PipelineCallbacks::class, 'notify'],
-        ['operations'],
-    );
+```text
+cron-heartbeat:heartbeat
 ```
 
-Static callback для `thenContainer()` получает container и context перед
-настроенными аргументами:
+Нажмите `Ctrl-C`: master отправит активным process groups `SIGTERM`, дождётся
+grace period и завершится; зависшие группы после grace получают `SIGKILL`.
 
-```php
-public static function notify(
-    ContainerInterface $container,
-    TaskExecutionContext $context,
-    string $channel,
-): int {
-    return 0;
-}
-```
+## Дальше
 
-В атрибутах те же шаги задаются через `StaticTaskConfig`,
-`ContainerTaskConfig` и `SymfonyCommandTaskConfig`. См.
-[полный пример attribute pipeline](docs/examples/attribute-pipeline.md) и
-[Symfony Console tasks](docs/guides/symfony-console-tasks.md).
+- [Быстрый старт](docs/ru/getting-started.md)
+- [Источники конфигурации](docs/ru/configuration-sources.md)
+- [Symfony Console](docs/ru/symfony-console-tasks.md)
+- [YAML exec-каталог](docs/ru/yaml-exec-catalog.md)
+- [Success chains](docs/ru/success-chains.md)
+- [Расписания и profiles](docs/ru/scheduling-and-profiles.md)
+- [Runtime и эксплуатация](docs/ru/runtime-and-operations.md)
+- [Миграция system cron](docs/ru/migrating-system-cron.md)
+- [Публичный API](docs/ru/public-api.md)
+- [Миграция 0.1 → 0.2](docs/ru/migration-0.1-to-0.2.md)
 
-## Документация по разделам
-
-### Guides
-
-- [Quick start](docs/guides/quick-start.md)
-- [Configuration sources](docs/guides/configuration-sources.md)
-- [Symfony Console tasks](docs/guides/symfony-console-tasks.md)
-- [Application migration](docs/guides/application-migration.md)
-- [Task chains](docs/guides/task-chains.md)
-
-### Reference
-
-- [Scheduling и profiles](docs/reference/scheduling-and-profiles.md)
-- [Runtime](docs/reference/runtime.md)
-- [Container contract](docs/reference/container-contract.md)
-- [Configuration validation](docs/reference/configuration-validation.md)
-
-### Examples
-
-- [Application worker](docs/examples/application-worker.md)
-- [Attribute pipeline](docs/examples/attribute-pipeline.md)
-- Исполняемые PHP-заготовки находятся в [`examples/`](examples/).
-
-## Разработка
-
-```shell
-make check
-make test-php-matrix
-```
-
-Матрица проверяет PHP 8.2–8.5 с минимально допустимыми и последними
-совместимыми версиями зависимостей. Один вариант можно запустить отдельно:
-
-```shell
-make test-php-version PHP_VERSION=8.4 DEPENDENCY_MODE=lowest
-```
+Лицензия: [MIT](LICENSE).

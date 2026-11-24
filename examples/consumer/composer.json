@@ -1,0 +1,9 @@
+{
+    "name": "app/cron-heartbeat",
+    "description": "Clean-consumer heartbeat for roman-fedor-skij/cron",
+    "license": "proprietary",
+    "require": {
+        "php": "^8.2",
+        "romanfedorskij/cron": "^0.2"
+    }
+}

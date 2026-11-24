@@ -1,0 +1,4 @@
+interface:
+  display_name: "Cron Worker Integration"
+  short_description: "Migrate application schedules into cron 0.2"
+  default_prompt: "Use $cron-worker-integration to inventory and safely integrate this application's scheduled work."

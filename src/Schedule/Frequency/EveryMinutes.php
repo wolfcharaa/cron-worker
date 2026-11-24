@@ -6,15 +6,34 @@ namespace Wolfcharaa\Cron\Schedule\Frequency;
 
 use Wolfcharaa\Cron\Schedule\CronExpression;
 
-final readonly class EveryMinutes extends EveryTime
+/** Cron calendar-field shortcut for minute steps. */
+final readonly class EveryMinutes
 {
-    public function expression(): CronExpression
+    public function __construct(public int $interval = 1)
     {
-        return (new CronExpression())->withMinute($this->stepRule());
+        self::guard($this->interval, 59);
     }
 
-    protected function maximumInterval(): int
+    /** Converts the calendar-field step to a cron expression. */
+    public function expression(): CronExpression
     {
-        return 59;
+        return (new CronExpression())->withMinute($this->rule());
+    }
+
+    private function rule(): string
+    {
+        return $this->interval === 1 ? '*' : '*/' . $this->interval;
+    }
+
+    private static function guard(int $interval, int $maximum): void
+    {
+        if ($interval < 1 || $interval > $maximum) {
+            throw new \InvalidArgumentException(\sprintf(
+                '%s interval must be between 1 and %d, %d given.',
+                self::class,
+                $maximum,
+                $interval,
+            ));
+        }
     }
 }

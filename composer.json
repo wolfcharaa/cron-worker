@@ -1,6 +1,6 @@
 {
     "name": "romanfedorskij/cron",
-    "description": "Non-blocking cron scheduler with forked PHP workers",
+    "description": "Unix cron scheduler with forked PHP workers and graceful process-group shutdown",
     "license": "MIT",
     "type": "library",
     "authors": [
@@ -18,13 +18,13 @@
         "psr/clock": "^1.0",
         "psr/container": "^1.1 || ^2.0",
         "psr/log": "^3.0",
-        "revolt/event-loop": "^1.0",
         "symfony/console": "^6.4 || ^7.4",
         "symfony/yaml": "^7.4"
     },
     "require-dev": {
         "buggregator/trap": "^1.16.1",
         "friendsofphp/php-cs-fixer": "^3.95.27",
+        "llm/skills": "^1.20",
         "phpstan/phpstan": "^2.3.1",
         "phpstan/phpstan-strict-rules": "^2.1",
         "phpyh/coding-standard": "^2.6.3",
@@ -40,12 +40,27 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "Wolfcharaa\\Cron\\Dev\\": "dev/",
             "Wolfcharaa\\Cron\\Tests\\": "tests/"
         }
     },
+    "bin": [
+        "bin/crontab-to-yaml"
+    ],
     "config": {
+        "allow-plugins": {
+            "llm/skills": true
+        },
         "lock": false,
         "sort-packages": true
+    },
+    "extra": {
+        "skills": {
+            "source": "resources/skills"
+        }
+    },
+    "scripts": {
+        "archive:check": "sh bin/check-package-archive",
+        "consumer:check": "sh bin/check-consumer-example",
+        "test": "testo --no-coverage"
     }
 }

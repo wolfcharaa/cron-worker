@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-24
+
+### Added
+
+- Intentional `0.2` public API allowlist, paired Russian/English task-oriented
+  documentation, shared executable examples, and complete `0.1 → 0.2`
+  migration guidance.
+- Immutable configuration maps and closed service, Symfony Command, and exec
+  configuration values with atomic selected-profile compilation.
+- Installed fail-closed `crontab-to-yaml` migration command, versioned YAML
+  schema, clean-consumer heartbeat replay, archive inspection, and packaged
+  `cron-worker-integration` skill.
+- Public `CronRuntimeException` for fatal master-process failures.
+
+### Changed
+
+- Replaced the Revolt runtime with an internal sequential PCNTL loop using
+  bounded 250 ms waits, wall-clock schedule evaluation, monotonic shutdown
+  grace, and `SIGTERM` → `SIGKILL` process-group escalation.
+- Moved `SchedulerOptions` and `TaskExecutionContext` to the root namespace and
+  profile map/definition values to `Configuration`; renamed the returned
+  one-shot builder to `ChainTaskBuilder`.
+- Symfony Commands now resolve only from a fresh child-local PSR-11 container.
+- Composer distributions keep docs, examples, schema, CLI, and skill while
+  excluding tests and repository-only tooling; the clean-consumer gate installs
+  from the unpacked distribution with production dependencies only.
+
+### Fixed
+
+- Duplicate shared (`any`) task names are rejected while constructing an
+  immutable profile map.
+- Release checks run on POSIX `sh` and documentation link tests no longer rely
+  on platform-specific brace globbing.
+
+### Removed
+
+- Public runtime/process/handler/validator/container-factory SPIs, direct task
+  and schedule composition, mutable registry APIs, custom config/attribute/
+  frequency SPIs, static/container-callback conveniences, and live crontab
+  loading. See the migration guide for replacements.
+
 ## [0.1.0] - 2026-10-10
 
 ### Changed

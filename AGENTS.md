@@ -2,15 +2,16 @@
 
 Use the global `development` skill for code changes, tests, commits and
 debugging. Use `library-documentation` when changing the public documentation.
-Use the repository-local `cron-worker-integration` skill when integrating this
-package into an application or migrating existing cron configuration.
+The packaged `resources/skills/cron-worker-integration` skill is a consumer
+asset, not an active instruction for library development. Install/use it only
+when explicitly integrating this package into an application.
 
 ## Invariants
 
 - Keep the package compatible with PHP 8.2-8.5 on Unix-like systems with
   `pcntl` and `posix`.
-- Preserve the non-blocking master process: blocking work belongs in forked
-  child workers.
+- Preserve the bounded sequential PCNTL master loop: blocking application work
+  belongs in forked child workers, and master waits remain at most 250 ms.
 - Create application containers and external connections inside child scope.
 - Keep configuration loaders independent and validate their combined profile
   map before task registration.

@@ -1,0 +1,123 @@
+#!/usr/bin/env sh
+
+set -eu
+
+repository=$(cd "$(dirname "$0")/.." && pwd)
+temporary=$(mktemp -d)
+cron_php_bin=${CRON_PHP_BIN:-php}
+cron_composer_bin=${CRON_COMPOSER_BIN:-composer}
+package_archive="$temporary/cron-package.zip"
+package_directory="$temporary/package"
+heartbeat_pid=''
+integrations_pid=''
+
+cleanup() {
+    for pid in "$heartbeat_pid" "$integrations_pid"; do
+        if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+            kill -TERM "$pid" 2>/dev/null || true
+            sleep 1
+            kill -KILL "$pid" 2>/dev/null || true
+        fi
+    done
+
+    rm -rf "$temporary"
+}
+
+trap cleanup EXIT INT TERM
+
+mkdir -p "$package_directory"
+cd "$repository"
+"$cron_composer_bin" archive \
+    --format=zip \
+    --dir="$temporary" \
+    --file=cron-package >/dev/null
+unzip -q "$package_archive" -d "$package_directory"
+
+cp "$repository/examples/consumer/composer.json" "$temporary/composer.json"
+mkdir -p "$temporary/bin"
+cp "$repository/examples/consumer/bin/heartbeat.php" "$temporary/bin/heartbeat.php"
+cp "$repository/examples/consumer/bin/integrations.php" "$temporary/bin/integrations.php"
+
+cd "$temporary"
+"$cron_composer_bin" config --json repositories.cron "{\"type\":\"path\",\"url\":\"$package_directory\",\"options\":{\"symlink\":false,\"versions\":{\"romanfedorskij/cron\":\"0.2.999\"}}}"
+"$cron_composer_bin" install --no-dev --no-interaction --prefer-dist --no-progress
+
+installed="$temporary/vendor/romanfedorskij/cron"
+for repository_only in \
+    tests \
+    .agents \
+    .github \
+    AGENTS.md \
+    Makefile \
+    composer.lock \
+    phpstan.dist.neon \
+    rector.php \
+    testo.php \
+    bin/check-package-archive \
+    bin/check-consumer-example; do
+    if [ -e "$installed/$repository_only" ]; then
+        echo "Installed package contains repository-only path: $repository_only" >&2
+        exit 1
+    fi
+done
+
+for dev_package in \
+    buggregator/trap \
+    friendsofphp/php-cs-fixer \
+    llm/skills \
+    phpstan/phpstan \
+    rector/rector \
+    testo/testo; do
+    if "$cron_composer_bin" show --locked "$dev_package" >/dev/null 2>&1; then
+        echo "Clean consumer installed package dev dependency: $dev_package" >&2
+        exit 1
+    fi
+done
+
+"$cron_php_bin" bin/heartbeat.php > heartbeat.log 2>&1 &
+heartbeat_pid=$!
+"$cron_php_bin" bin/integrations.php > integrations.log 2>&1 &
+integrations_pid=$!
+
+for _ in $(seq 1 65); do
+    if grep -Fxq 'cron-heartbeat:heartbeat' heartbeat.log \
+        && grep -Fxq 'cron-service' integrations.log \
+        && grep -Fxq 'cron-symfony' integrations.log \
+        && grep -Fxq 'cron-exec' integrations.log; then
+        kill -INT "$heartbeat_pid"
+        kill -INT "$integrations_pid"
+
+        for _ in $(seq 1 10); do
+            if ! kill -0 "$heartbeat_pid" 2>/dev/null \
+                && ! kill -0 "$integrations_pid" 2>/dev/null; then
+                wait "$heartbeat_pid"
+                wait "$integrations_pid"
+                heartbeat_pid=''
+                integrations_pid=''
+                echo 'Clean consumer heartbeat, all integrations, and graceful SIGINT passed'
+                exit 0
+            fi
+
+            sleep 1
+        done
+
+        echo 'Heartbeat appeared, but the scheduler did not stop after SIGINT.' >&2
+        exit 1
+    fi
+
+    if ! kill -0 "$heartbeat_pid" 2>/dev/null || ! kill -0 "$integrations_pid" 2>/dev/null; then
+        wait "$heartbeat_pid" 2>/dev/null || true
+        wait "$integrations_pid" 2>/dev/null || true
+        echo 'A scheduler exited before all consumer markers appeared:' >&2
+        cat heartbeat.log integrations.log >&2
+        heartbeat_pid=''
+        integrations_pid=''
+        exit 1
+    fi
+
+    sleep 1
+done
+
+echo 'Consumer markers did not all appear within 65 seconds:' >&2
+cat heartbeat.log integrations.log >&2
+exit 1

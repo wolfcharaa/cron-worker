@@ -1,0 +1,39 @@
+#!/usr/bin/env sh
+
+set -eu
+
+repository=$(cd "$(dirname "$0")/.." && pwd)
+temporary=$(mktemp -d)
+trap 'rm -rf "$temporary"' EXIT
+
+cd "$repository"
+composer archive --format=zip --dir="$temporary" --file=cron-package >/dev/null
+archive="$temporary/cron-package.zip"
+entries="$temporary/entries.txt"
+unzip -Z1 "$archive" > "$entries"
+
+for required in \
+    composer.json \
+    README.md \
+    README.en.md \
+    bin/crontab-to-yaml \
+    examples/consumer/bin/heartbeat.php \
+    examples/consumer/bin/integrations.php \
+    examples/cron.yaml \
+    resources/schema/crontab.schema.json \
+    resources/skills/cron-worker-integration/SKILL.md \
+    docs/ru/public-api.md \
+    docs/en/public-api.md; do
+    grep -Fxq "$required" "$entries" || {
+        echo "Composer archive is missing required consumer artifact: $required" >&2
+        exit 1
+    }
+done
+
+if grep -Eq '(^|/)(tests|\.agents|\.context|\.github|\.idea|dev|docker|coverage|var|vendor)/|(^|/)(AGENTS\.md|Makefile|phpstan\.dist\.neon|rector\.php|testo\.php|composer\.lock)$|^bin/check-' "$entries"; then
+    echo 'Composer archive contains repository-only files:' >&2
+    grep -E '(^|/)(tests|\.agents|\.context|\.github|\.idea|dev|docker|coverage|var|vendor)/|(^|/)(AGENTS\.md|Makefile|phpstan\.dist\.neon|rector\.php|testo\.php|composer\.lock)$|^bin/check-' "$entries" >&2
+    exit 1
+fi
+
+echo "Composer archive contract passed: $(wc -l < "$entries") files"

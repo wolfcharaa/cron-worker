@@ -1,0 +1,17 @@
+version: 1
+defaults:
+  shell: /bin/bash
+  environment:
+    APP_ENV: prod
+profiles:
+  prod:
+    jobs:
+      - name: filesystem-backup
+        schedule: '0 2 * * *'
+        command: 'bin/backup --no-interaction'
+        working_directory: /srv/application
+        overlap_policy: forbid
+        log: /var/log/application/cron.log
+        then:
+          - name: verify-backup
+            command: 'bin/verify-backup --latest'

@@ -58,11 +58,11 @@ install-lowest: ## Install lowest possible dependencies
 # Quality tools
 
 fixer: var ## Fix code style
-	$(RUN) php-cs-fixer fix --diff --verbose $(ARGS)
+	$(RUN) php-cs-fixer fix --diff --verbose --sequential $(ARGS)
 .PHONY: fixer
 
 fixer-check: var ## Check code style
-	$(RUN) php-cs-fixer fix --diff --verbose --dry-run $(ARGS)
+	$(RUN) php-cs-fixer fix --diff --verbose --dry-run --sequential $(ARGS)
 .PHONY: fixer-check
 
 rector: var vendor ## Apply Rector rules
@@ -124,12 +124,20 @@ composer-normalize-check: ## Check composer.json is normalized
 	$(COMPOSER) normalize --diff --dry-run
 .PHONY: composer-normalize-check
 
+archive-check: vendor ## Inspect the Composer distribution contract
+	$(RUN) composer archive:check
+.PHONY: archive-check
+
+consumer-check: vendor ## Replay the installed clean-consumer examples
+	$(RUN) composer consumer:check
+.PHONY: consumer-check
+
 # CI
 
 fix: fixer rector composer-normalize ## Fix code style and normalize composer.json
 .PHONY: fix
 
-check: fixer-check rector-check composer-validate composer-normalize-check deps-analyze phpstan test ## Run all checks
+check: fixer-check rector-check composer-validate composer-normalize-check deps-analyze phpstan test archive-check ## Run all checks
 .PHONY: check
 
 # ---

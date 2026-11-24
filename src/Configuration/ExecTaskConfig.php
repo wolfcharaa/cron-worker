@@ -4,12 +4,10 @@ declare(strict_types=1);
 
 namespace Wolfcharaa\Cron\Configuration;
 
-use Wolfcharaa\Cron\Container\ContainerFactory;
-use Wolfcharaa\Cron\Task\Handler\ExecTaskHandler;
-use Wolfcharaa\Cron\Task\Handler\TaskHandler;
 use Wolfcharaa\Cron\Task\OverlapPolicy;
 
-final readonly class ExecTaskConfig implements TaskConfigInterface
+/** Data-only declaration of a shell command task. */
+final readonly class ExecTaskConfig
 {
     /** @param array<string, string> $environment */
     public function __construct(
@@ -47,25 +45,15 @@ final readonly class ExecTaskConfig implements TaskConfigInterface
         }
     }
 
+    /** Returns the stable scheduler task name. */
     public function name(): string
     {
         return $this->taskName;
     }
 
+    /** Returns the task overlap policy. */
     public function overlapPolicy(): OverlapPolicy
     {
         return $this->overlapPolicy;
-    }
-
-    public function createHandler(?ContainerFactory $containerFactory): TaskHandler
-    {
-        return new ExecTaskHandler(
-            command: $this->command,
-            workingDirectory: $this->workingDirectory,
-            environment: $this->environment,
-            shell: $this->shell,
-            expectedUser: $this->expectedUser,
-            outputFile: $this->outputFile,
-        );
     }
 }

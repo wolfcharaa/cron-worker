@@ -5,13 +5,10 @@ declare(strict_types=1);
 namespace Wolfcharaa\Cron\Configuration;
 
 use Symfony\Component\Console\Command\Command;
-use Wolfcharaa\Cron\Container\ContainerFactory;
-use Wolfcharaa\Cron\Exception\MissingContainerFactory;
-use Wolfcharaa\Cron\Task\Handler\SymfonyCommandTaskHandler;
-use Wolfcharaa\Cron\Task\Handler\TaskHandler;
 use Wolfcharaa\Cron\Task\OverlapPolicy;
 
-final readonly class SymfonyCommandTaskConfig implements TaskConfigInterface
+/** Data-only declaration of a Symfony Console command service task. */
+final readonly class SymfonyCommandTaskConfig
 {
     /** @var class-string<Command> */
     public string $commandId;
@@ -47,26 +44,15 @@ final readonly class SymfonyCommandTaskConfig implements TaskConfigInterface
         }
     }
 
+    /** Returns the stable scheduler task name. */
     public function name(): string
     {
         return $this->taskName ?? $this->commandId;
     }
 
+    /** Returns the task overlap policy. */
     public function overlapPolicy(): OverlapPolicy
     {
         return $this->overlapPolicy;
-    }
-
-    public function createHandler(?ContainerFactory $containerFactory): TaskHandler
-    {
-        if ($containerFactory === null) {
-            throw new MissingContainerFactory();
-        }
-
-        return new SymfonyCommandTaskHandler(
-            containerFactory: $containerFactory,
-            commandId: $this->commandId,
-            input: $this->input,
-        );
     }
 }

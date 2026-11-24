@@ -6,18 +6,26 @@ namespace Wolfcharaa\Cron\Schedule\Frequency;
 
 use Wolfcharaa\Cron\Schedule\CronExpression;
 
-final readonly class EveryDays extends EveryTime
+/** Cron calendar-field shortcut for day-of-month steps. */
+final readonly class EveryDays
 {
+    public function __construct(public int $interval = 1)
+    {
+        if ($this->interval < 1 || $this->interval > 31) {
+            throw new \InvalidArgumentException(\sprintf(
+                '%s interval must be between 1 and 31, %d given.',
+                self::class,
+                $this->interval,
+            ));
+        }
+    }
+
+    /** Converts the calendar-field step to a cron expression. */
     public function expression(): CronExpression
     {
         return (new CronExpression())
             ->withMinute(0)
             ->withHour(0)
-            ->withDayOfMonth($this->stepRule());
-    }
-
-    protected function maximumInterval(): int
-    {
-        return 31;
+            ->withDayOfMonth($this->interval === 1 ? '*' : '*/' . $this->interval);
     }
 }

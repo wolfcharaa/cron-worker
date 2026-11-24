@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Wolfcharaa\Cron\Configuration;
 
+/** Validated scheduler deployment-profile name. */
 final readonly class Profile implements \Stringable
 {
     public const ANY = 'any';
@@ -31,6 +32,7 @@ final readonly class Profile implements \Stringable
         $this->name = $name;
     }
 
+    /** Normalizes one public profile representation. */
     public static function normalize(self|string|\BackedEnum $profile): self
     {
         return $profile instanceof self ? $profile : new self($profile);
@@ -69,6 +71,7 @@ final readonly class Profile implements \Stringable
         return array_values($normalized);
     }
 
+    /** Reports whether this declaration includes the active profile. */
     public function includes(self $active): bool
     {
         return $this->name === self::ANY || $this->name === $active->name;

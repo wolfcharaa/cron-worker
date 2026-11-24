@@ -4,84 +4,93 @@ declare(strict_types=1);
 
 namespace Wolfcharaa\Cron;
 
-use Psr\Clock\ClockInterface;
 use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
-use Wolfcharaa\Cron\Clock\SystemClock;
+use Wolfcharaa\Cron\Configuration\CronProfileMap;
 use Wolfcharaa\Cron\Configuration\Loader\CronConfigLoaderInterface;
-use Wolfcharaa\Cron\Configuration\Profile;
-use Wolfcharaa\Cron\Container\CallableContainerFactory;
-use Wolfcharaa\Cron\Container\ContainerFactory;
-use Wolfcharaa\Cron\Exception\DuplicateTask;
-use Wolfcharaa\Cron\Exception\MissingContainerFactory;
-use Wolfcharaa\Cron\Process\PcntlProcessSupervisor;
-use Wolfcharaa\Cron\Process\ProcessSupervisor;
-use Wolfcharaa\Cron\Registry\CronProfileMap;
-use Wolfcharaa\Cron\Runtime\RevoltSchedulerRuntime;
-use Wolfcharaa\Cron\Runtime\SchedulerOptions;
+use Wolfcharaa\Cron\Exception\CronRuntimeException;
+use Wolfcharaa\Cron\Exception\InvalidCronConfiguration;
+use Wolfcharaa\Cron\Internal\Configuration\TaskConfigCompiler;
+use Wolfcharaa\Cron\Internal\Runtime\PcntlSchedulerRuntime;
+use Wolfcharaa\Cron\Internal\Task\CallableTaskHandler;
+use Wolfcharaa\Cron\Internal\Task\ContainerServiceTaskHandler;
+use Wolfcharaa\Cron\Internal\Task\ScheduledTask;
 use Wolfcharaa\Cron\Schedule\CronExpression;
-use Wolfcharaa\Cron\Schedule\CronSchedule;
-use Wolfcharaa\Cron\Task\Handler\ContainerCallbackHandler;
-use Wolfcharaa\Cron\Task\Handler\ContainerServiceHandler;
-use Wolfcharaa\Cron\Task\Handler\StaticTaskHandler;
-use Wolfcharaa\Cron\Task\Handler\TaskHandler;
-use Wolfcharaa\Cron\Task\OneShotTaskBuilder;
 use Wolfcharaa\Cron\Task\OverlapPolicy;
-use Wolfcharaa\Cron\Task\ScheduledTask;
 use Wolfcharaa\Cron\Task\ScheduledTaskBuilder;
-use Wolfcharaa\Cron\Task\TaskExecutionContext;
-use Wolfcharaa\Cron\Validation\CronConfigValidator;
 
-final class Scheduler implements SchedulerInterface
+/**
+ * Registers, validates, and runs one long-lived fork-based cron worker.
+ *
+ * Use {@see task()} for an application callable, {@see serviceTask()} for a
+ * child-local PSR-11 service, or {@see load()} for an immutable configuration
+ * map or loader. Each registration returns or contains a schedule; {@see run()}
+ * starts the blocking master loop and returns only after graceful shutdown.
+ *
+ * The master owns scheduling, overlap checks, concurrency, signals, and child
+ * process groups. Application containers and external connections must be
+ * created by the optional container factory inside a forked child. A scheduler
+ * instance is configured for one profile and is not reusable after `run()`.
+ *
+ * Typical manual task:
+ *
+ *     $scheduler = new Scheduler(
+ *         new SchedulerOptions(profile: 'production', timezone: 'UTC'),
+ *     );
+ *     $scheduler->task('heartbeat', static function (TaskExecutionContext $context): int {
+ *         echo $context->taskName, PHP_EOL;
+ *
+ *         return 0;
+ *     })->everyMinute()->withoutOverlapping();
+ *     $scheduler->run();
+ *
+ * Configuration failures are reported before the master loop through
+ * {@see InvalidCronConfiguration}; fatal master-process failures use
+ * {@see CronRuntimeException}. Child failures are
+ * logged and represented by their exit status rather than rethrown in master.
+ */
+final class Scheduler
 {
     /** @var array<string, ScheduledTask|ScheduledTaskBuilder> */
     private array $tasks = [];
 
-    private readonly RevoltSchedulerRuntime $runtime;
+    private readonly SchedulerOptions $options;
 
-    private readonly ?ContainerFactory $containerFactory;
+    private readonly LoggerInterface $logger;
 
-    private readonly Profile $profile;
+    /** @var \Closure(): ContainerInterface|null */
+    private readonly ?\Closure $containerFactory;
 
-    private readonly CronConfigValidator $validator;
-
-    /** @param ContainerFactory|(callable(): ContainerInterface)|null $containerFactory */
+    /**
+     * Creates one worker composition root without opening child resources.
+     *
+     * @param (callable(): ContainerInterface)|null $containerFactory
+     */
     public function __construct(
         ?SchedulerOptions $options = null,
-        ?ClockInterface $clock = null,
         ?LoggerInterface $logger = null,
-        ?ProcessSupervisor $supervisor = null,
-        null|ContainerFactory|callable $containerFactory = null,
-        ?CronConfigValidator $validator = null,
+        ?callable $containerFactory = null,
     ) {
-        $options ??= new SchedulerOptions();
-        $this->profile = $options->profile;
-        $this->validator = $validator ?? new CronConfigValidator();
-        $this->containerFactory = match (true) {
-            $containerFactory instanceof ContainerFactory => $containerFactory,
-            $containerFactory !== null => new CallableContainerFactory($containerFactory),
-            default => null,
-        };
-        $this->runtime = new RevoltSchedulerRuntime(
-            supervisor: $supervisor ?? new PcntlProcessSupervisor(),
-            clock: $clock ?? new SystemClock(),
-            logger: $logger ?? new NullLogger(),
-            options: $options,
-        );
+        $this->options = $options ?? new SchedulerOptions();
+        $this->logger = $logger ?? new NullLogger();
+        $this->containerFactory = $containerFactory === null
+            ? null
+            : self::normalizeContainerFactory($containerFactory);
     }
 
-    /** @param (callable(): mixed)|TaskHandler $handler */
-    public function task(string $name, callable|TaskHandler $handler): ScheduledTaskBuilder
+    /**
+     * Registers a manual callable and returns its fluent schedule builder.
+     *
+     * @param (callable(): (int|null))|(callable(TaskExecutionContext): (int|null)) $handler
+     */
+    public function task(string $name, callable $handler): ScheduledTaskBuilder
     {
-        if (isset($this->tasks[$name])) {
-            throw new DuplicateTask($name);
-        }
-
-        $builder = new ScheduledTaskBuilder(
-            name: $name,
-            handler: $handler,
-            containerFactory: $this->containerFactory,
+        $this->guardUnique($name);
+        $builder = ScheduledTaskBuilder::assemble(
+            $name,
+            new CallableTaskHandler($handler, '$.tasks.' . $name),
+            $this->containerFactory,
         );
         $this->tasks[$name] = $builder;
 
@@ -89,133 +98,147 @@ final class Scheduler implements SchedulerInterface
     }
 
     /**
-     * @param callable(ContainerInterface, TaskExecutionContext, mixed...): mixed $handler
-     * @param list<mixed> $arguments
+     * Registers a child-local PSR-11 service task.
+     *
+     * @param array<int|string, mixed> $arguments
      */
-    public function containerTask(string $name, callable $handler, array $arguments = []): ScheduledTaskBuilder
-    {
-        return $this->task($name, new ContainerCallbackHandler(
-            $this->requireContainerFactory(),
-            $handler,
-            $arguments,
-        ));
-    }
-
-    /** @param list<mixed> $arguments */
-    public function staticTask(
-        string $name,
-        string $class,
-        string $method,
-        array $arguments = [],
-    ): ScheduledTaskBuilder {
-        return $this->task($name, new StaticTaskHandler($class, $method, $arguments));
-    }
-
-    /** @param array<int|string, mixed> $arguments */
     public function serviceTask(
         string $name,
         string $serviceId,
         ?string $method = null,
         array $arguments = [],
     ): ScheduledTaskBuilder {
-        return $this->task($name, new ContainerServiceHandler(
-            containerFactory: $this->requireContainerFactory(),
-            serviceId: $serviceId,
-            method: $method,
-            arguments: $arguments,
-        ));
+        $this->guardUnique($name);
+
+        if (!array_is_list($arguments)) {
+            throw InvalidCronConfiguration::at('<manual>', '$.tasks.' . $name, 'service arguments must be a positional list.');
+        }
+
+        self::guardService($serviceId, $method, '$.tasks.' . $name);
+
+        $factory = $this->containerFactory ?? throw InvalidCronConfiguration::at(
+            '<manual>',
+            '$.tasks.' . $name,
+            'a container factory is required for service tasks.',
+        );
+        $builder = ScheduledTaskBuilder::assemble(
+            $name,
+            new ContainerServiceTaskHandler($factory, $serviceId, $method, $arguments),
+            $factory,
+        );
+        $this->tasks[$name] = $builder;
+
+        return $builder;
     }
 
-    /** @param (callable(): mixed)|TaskHandler $handler */
+    /**
+     * Registers a callable with an exact cron expression.
+     *
+     * @param (callable(): (int|null))|(callable(TaskExecutionContext): (int|null)) $handler
+     */
     public function cron(
         string $name,
         CronExpression|string $expression,
-        callable|TaskHandler $handler,
+        callable $handler,
         OverlapPolicy $overlapPolicy = OverlapPolicy::Forbid,
     ): self {
-        return $this->add(new ScheduledTask(
-            name: $name,
-            schedule: new CronSchedule($expression),
-            handler: $handler,
-            overlapPolicy: $overlapPolicy,
-        ));
-    }
+        $builder = $this->task($name, $handler)->cron($expression);
 
-    public function add(ScheduledTask $task): self
-    {
-        if (isset($this->tasks[$task->name])) {
-            throw new DuplicateTask($task->name);
+        if ($overlapPolicy === OverlapPolicy::Allow) {
+            $builder->allowOverlapping();
         }
-
-        $this->tasks[$task->name] = $task;
 
         return $this;
     }
 
+    /** Atomically compiles and adds the active profile. */
     public function load(CronProfileMap|CronConfigLoaderInterface $profiles): self
     {
-        if ($profiles instanceof CronConfigLoaderInterface) {
-            $profiles = $profiles->load();
-        }
+        $map = $profiles instanceof CronConfigLoaderInterface ? $profiles->load() : $profiles;
+        $definitions = $map->forProfile($this->options->profile);
+        $compiled = [];
+        $compiler = new TaskConfigCompiler($this->containerFactory);
 
-        $this->validator->assertValid($profiles, $this->containerFactory, $this->profile);
-
-        foreach ($profiles->forProfile($this->profile) as $task) {
-            $builder = $this
-                ->task($task->name, $task->task->createHandler($this->containerFactory))
-                ->cron($task->expression)
-                ->profiles(...$task->profiles);
-
-            if ($task->task->overlapPolicy() === OverlapPolicy::Allow) {
-                $builder->allowOverlapping();
+        foreach ($definitions as $definition) {
+            if (isset($this->tasks[$definition->name]) || isset($compiled[$definition->name])) {
+                throw InvalidCronConfiguration::at(
+                    '<definitions>',
+                    'profiles.' . $this->options->profile->name . '.tasks.' . $definition->name,
+                    'task name collides with an already registered task.',
+                );
             }
 
-            $chainBuilder = null;
-
-            foreach ($task->chain->tasks() as $chainTask) {
-                $handler = $chainTask->createHandler($this->containerFactory);
-                $chainBuilder = $chainBuilder instanceof OneShotTaskBuilder
-                    ? $chainBuilder->then($chainTask->name(), $handler)
-                    : $builder->then($chainTask->name(), $handler);
-
-                if ($chainTask->overlapPolicy() === OverlapPolicy::Allow) {
-                    $chainBuilder->allowOverlapping();
-                }
-            }
+            $compiled[$definition->name] = $compiler->compile($definition, $this->options->profile->name);
         }
+
+        $this->tasks += $compiled;
 
         return $this;
     }
 
+    /** Runs the PCNTL master loop until graceful shutdown completes. */
     public function run(): void
-    {
-        $this->runtime->run($this->tasks());
-    }
-
-    public function tasks(): array
     {
         $tasks = [];
 
         foreach ($this->tasks as $name => $task) {
-            $task = $task instanceof ScheduledTaskBuilder ? $task->build() : $task;
+            $task = $task instanceof ScheduledTaskBuilder ? $task->internalTask() : $task;
 
-            if ($task->runsIn($this->profile)) {
+            if (!$task instanceof ScheduledTask) {
+                throw new \LogicException('Scheduled task builder returned an invalid internal value.');
+            }
+
+            if ($task->runsIn($this->options->profile)) {
                 $tasks[$name] = $task;
             }
         }
 
         if ($tasks === []) {
-            throw new \LogicException(\sprintf(
-                'No scheduled tasks are enabled for profile "%s".',
-                $this->profile->name,
-            ));
+            throw InvalidCronConfiguration::at(
+                '<scheduler>',
+                'profiles.' . $this->options->profile->name,
+                'at least one scheduled task is required for the active profile.',
+            );
         }
 
-        return $tasks;
+        (new PcntlSchedulerRuntime($this->logger, $this->options))->run($tasks);
     }
 
-    private function requireContainerFactory(): ContainerFactory
+    private function guardUnique(string $name): void
     {
-        return $this->containerFactory ?? throw new MissingContainerFactory();
+        if (trim($name) === '') {
+            throw InvalidCronConfiguration::at('<manual>', '$.tasks', 'task name must not be empty.');
+        }
+
+        if (isset($this->tasks[$name])) {
+            throw InvalidCronConfiguration::at('<manual>', '$.tasks.' . $name, 'task name is already registered.');
+        }
+    }
+
+    private static function guardService(string $serviceId, ?string $method, string $path): void
+    {
+        if (trim($serviceId) === '') {
+            throw InvalidCronConfiguration::at('<manual>', $path, 'service id must not be empty.');
+        }
+
+        if ($method === '') {
+            throw InvalidCronConfiguration::at('<manual>', $path, 'service method must not be empty.');
+        }
+    }
+
+    /**
+     * @param callable(): ContainerInterface $factory
+     * @return \Closure(): ContainerInterface
+     */
+    private static function normalizeContainerFactory(callable $factory): \Closure
+    {
+        $factory = \Closure::fromCallable($factory);
+        $reflection = new \ReflectionFunction($factory);
+
+        if ($reflection->getNumberOfRequiredParameters() !== 0) {
+            throw InvalidCronConfiguration::at('<scheduler>', '$.container_factory', 'container factory must not require arguments.');
+        }
+
+        return static fn(): ContainerInterface => $factory();
     }
 }

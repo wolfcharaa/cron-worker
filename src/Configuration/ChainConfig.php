@@ -4,13 +4,15 @@ declare(strict_types=1);
 
 namespace Wolfcharaa\Cron\Configuration;
 
+/** Immutable ordered task configs executed after a successful root or step. */
 final readonly class ChainConfig
 {
-    /** @var list<TaskConfigInterface> */
+    /** @var list<ServiceTaskConfig|SymfonyCommandTaskConfig|ExecTaskConfig> */
     private array $tasks;
 
-    public function __construct(TaskConfigInterface ...$tasks)
-    {
+    public function __construct(
+        ServiceTaskConfig|SymfonyCommandTaskConfig|ExecTaskConfig ...$tasks,
+    ) {
         $names = [];
 
         foreach ($tasks as $task) {
@@ -27,7 +29,11 @@ final readonly class ChainConfig
         $this->tasks = array_values($tasks);
     }
 
-    /** @return list<TaskConfigInterface> */
+    /**
+     * Returns task configs in execution order.
+     *
+     * @return list<ServiceTaskConfig|SymfonyCommandTaskConfig|ExecTaskConfig>
+     */
     public function tasks(): array
     {
         return $this->tasks;

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Wolfcharaa\Cron\Configuration;
 
+/** Named non-interactive input passed to a Symfony Command. */
 final readonly class SymfonyInput
 {
     /** @var array<string, mixed> */
@@ -29,7 +30,11 @@ final readonly class SymfonyInput
         $this->options = $options;
     }
 
-    /** @return array<string, mixed> */
+    /**
+     * Returns ArrayInput-compatible named parameters.
+     *
+     * @return array<string, mixed>
+     */
     public function parameters(): array
     {
         $parameters = $this->arguments;
